@@ -42,12 +42,12 @@
     },
     tempura: {
       name: '炸虾天妇罗', theme: 'tempura', pieces: [
-        { id: 'batter', kind: 'batter', x: 0, y: 66, layer: 0 },
-        { id: 's1', kind: 'shrimp', x: -165, y: -4, layer: 1 },
-        { id: 's2', kind: 'shrimp', x: 165, y: -4, layer: 1 },
-        { id: 'd1', kind: 'dough', x: -78, y: -40, layer: 2, deps: ['s1'] },
-        { id: 'd2', kind: 'dough', x: 78, y: -40, layer: 2, deps: ['s2'] },
-        { id: 'mayo', kind: 'mayo', x: 0, y: 12, layer: 3 }]
+        { id: 's1', kind: 'shrimp', x: -165, y: -22, layer: 0 },
+        { id: 's2', kind: 'shrimp', x: 165, y: -22, layer: 0 },
+        { id: 'd1', kind: 'dough', x: -100, y: -50, layer: 1, deps: ['s1'] },
+        { id: 'd2', kind: 'dough', x: 100, y: -50, layer: 1, deps: ['s2'] },
+        { id: 'batter', kind: 'batter', x: 0, y: 52, layer: 2 },
+        { id: 'mayo', kind: 'mayo', x: 0, y: 26, layer: 3 }]
     },
     noodle: {
       name: '红烧牛肉面', theme: 'noodle', pieces: [
@@ -99,7 +99,7 @@
     { id: 1, name: '上下叠贴', works: ['eel'], mode: 1, budget: null, ideal: 8, reward: 100,
       hint: '先贴下面的，再贴上面的：米饭下、鳗鱼、米饭上、海苔。' },
     { id: 2, name: '同层与叠贴', works: ['tempura'], mode: 1, budget: null, ideal: 12, reward: 120,
-      hint: '同层的先后随意；每个面团要等它对应的虾仁贴好。' },
+      hint: '先虾仁，再面团；最后面衣酥盖在外面，美乃滋压在最上。' },
     { id: 3, name: '认出小干扰', works: ['salmon'], mode: 1, budget: null, ideal: 6, reward: 120, decoys: ['lemon', 'cucumber', 'candy'],
       hint: '页面里混着不属于这道料理的小干扰，认出来，别贴上去。' },
     { id: 4, name: '步数规划', works: ['eel'], mode: 1, budget: 10, ideal: 8, reward: 150,
