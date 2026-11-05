@@ -204,9 +204,9 @@
     if (wbCache[wid]) return wbCache[wid];
     var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
     TZ.WORKS[wid].pieces.forEach(function (p) {
-      var v = TZ.vis(p.kind);
-      x0 = Math.min(x0, p.x - v.w / 2); x1 = Math.max(x1, p.x + v.w / 2);
-      y0 = Math.min(y0, p.y - v.h / 2); y1 = Math.max(y1, p.y + v.h / 2);
+      var v = TZ.vis(p.kind), k = p.k || 1, vw = v.w * k, vh = v.h * k;
+      x0 = Math.min(x0, p.x - vw / 2); x1 = Math.max(x1, p.x + vw / 2);
+      y0 = Math.min(y0, p.y - vh / 2); y1 = Math.max(y1, p.y + vh / 2);
     });
     return (wbCache[wid] = { x0: x0, y0: y0, x1: x1, y1: y1, w: x1 - x0, h: y1 - y0, cx: (x0 + x1) / 2, cy: (y0 + y1) / 2 });
   };
@@ -238,9 +238,9 @@
     var root = TZ.el('div', 'work-comp');
     root.style.width = bb.w * s + 'px'; root.style.height = bb.h * s + 'px';
     TZ.WORKS[wid].pieces.forEach(function (p) {
-      var v = TZ.vis(p.kind);
-      var st = TZ.makeStk(p.kind, s, paper);
-      TZ.pos(st, (p.x - v.w / 2 - bb.x0) * s, (p.y - v.h / 2 - bb.y0) * s);
+      var v = TZ.vis(p.kind), k = p.k || 1;
+      var st = TZ.makeStk(p.kind, s * k, paper);
+      TZ.pos(st, (p.x - v.w * k / 2 - bb.x0) * s, (p.y - v.h * k / 2 - bb.y0) * s);
       st.style.zIndex = p.layer * 10;
       if (ghost) st.classList.add('ghost');
       root.appendChild(st);

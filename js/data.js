@@ -42,27 +42,29 @@
     },
     tempura: {
       name: '炸虾天妇罗', theme: 'tempura', pieces: [
-        { id: 's1', kind: 'shrimp', x: -165, y: -22, layer: 0 },
-        { id: 's2', kind: 'shrimp', x: 165, y: -22, layer: 0 },
-        { id: 'd1', kind: 'dough', x: -100, y: -50, layer: 1, deps: ['s1'] },
-        { id: 'd2', kind: 'dough', x: 100, y: -50, layer: 1, deps: ['s2'] },
-        { id: 'batter', kind: 'batter', x: 0, y: 52, layer: 2 },
-        { id: 'mayo', kind: 'mayo', x: 0, y: 26, layer: 3 }]
+        // 现实里：虾仁裹上面团，再整个包进酥脆的面衣里，只有虾尾露在外面；美乃滋最后淋在面衣上
+        { id: 's1', kind: 'shrimp', k: 1.15, x: -165, y: -42, layer: 0 },
+        { id: 's2', kind: 'shrimp', k: 1.15, x: 165, y: -42, layer: 0 },
+        { id: 'd1', kind: 'dough', k: 0.8, x: -150, y: -2, layer: 1, deps: ['s1'] },
+        { id: 'd2', kind: 'dough', k: 0.8, x: 150, y: -2, layer: 1, deps: ['s2'] },
+        { id: 'batter', kind: 'batter', x: 0, y: 0, layer: 2 },
+        { id: 'mayo', kind: 'mayo', x: 0, y: 0, layer: 3 }]
     },
     noodle: {
       name: '红烧牛肉面', theme: 'noodle', pieces: [
+        // 面堆在汤面里，露出一圈汤；牛肉与青菜摆在面上，葱花撒在最上
         { id: 'bowl', kind: 'soupBowl', x: 0, y: 0, layer: 0 },
-        { id: 'noodles', kind: 'noodles', x: 0, y: -112, layer: 1 },
-        { id: 'beef', kind: 'beef', x: -118, y: -138, layer: 2 },
-        { id: 'greens', kind: 'greens', x: 142, y: -142, layer: 2 },
-        { id: 'scallion', kind: 'scallion', x: 10, y: -100, layer: 3 }]
+        { id: 'noodles', kind: 'noodles', k: 0.75, x: 0, y: -45, layer: 1 },
+        { id: 'beef', kind: 'beef', k: 0.6, x: -58, y: -80, layer: 2 },
+        { id: 'greens', kind: 'greens', k: 0.62, x: 68, y: -88, layer: 2 },
+        { id: 'scallion', kind: 'scallion', k: 0.5, x: 0, y: -62, layer: 3 }]
     },
     tomato: {
       name: '番茄炒蛋', theme: 'tomato', pieces: [
         { id: 'plate', kind: 'plate', x: 0, y: 0, layer: 0 },
-        { id: 'tomato', kind: 'tomato', x: -118, y: -4, layer: 1 },
-        { id: 'eggs', kind: 'eggs', x: 112, y: 10, layer: 1 },
-        { id: 'scallion', kind: 'scallion', x: 70, y: -20, layer: 2 }]
+        { id: 'tomato', kind: 'tomato', k: 0.85, x: -88, y: -2, layer: 1 },
+        { id: 'eggs', kind: 'eggs', k: 0.8, x: 85, y: 8, layer: 1 },
+        { id: 'scallion', kind: 'scallion', k: 0.5, x: 55, y: -12, layer: 2 }]
     },
     living: {
       name: '温馨客厅', theme: 'living', pieces: [
@@ -78,10 +80,10 @@
     salmonRice: {
       name: '鲑鱼小定食', theme: 'salmonRice', pieces: [
         { id: 'plate', kind: 'plate', x: 0, y: 0, layer: 0 },
-        { id: 'rice', kind: 'rice', x: 0, y: 52, layer: 1 },
-        { id: 'salmon', kind: 'salmon', x: 0, y: -18, layer: 2 },
-        { id: 'nori', kind: 'nori', x: 0, y: 18, layer: 3 },
-        { id: 'scallion', kind: 'scallion', x: 40, y: -34, layer: 4 }]
+        { id: 'rice', kind: 'rice', k: 0.85, x: 0, y: 40, layer: 1 },
+        { id: 'salmon', kind: 'salmon', k: 0.85, x: 0, y: -20, layer: 2 },
+        { id: 'nori', kind: 'nori', k: 0.72, x: 0, y: 8, layer: 3 },
+        { id: 'scallion', kind: 'scallion', k: 0.45, x: 45, y: -32, layer: 4 }]
     },
     eelPlate: {
       name: '鳗鱼饭团盘', theme: 'eelPlate', pieces: [
@@ -94,37 +96,40 @@
     tendon: {
       name: '天妇罗盖饭', theme: 'tendon', pieces: [
         { id: 'plate', kind: 'plate', x: 0, y: 0, layer: 0 },
-        { id: 'rice', kind: 'rice', x: 0, y: 28, layer: 1 },
-        { id: 's1', kind: 'shrimp', x: -115, y: -52, layer: 2 },
-        { id: 's2', kind: 'shrimp', x: 115, y: -52, layer: 2 },
-        { id: 'batter', kind: 'batter', x: 0, y: 5, layer: 3 },
-        { id: 'mayo', kind: 'mayo', x: 0, y: 8, layer: 4 }]
+        // 米饭打底，裹着虾的天妇罗横放在饭上，只露虾尾，再淋美乃滋
+        { id: 'rice', kind: 'rice', k: 0.95, x: 0, y: 30, layer: 1 },
+        { id: 's1', kind: 'shrimp', k: 1.1, x: -130, y: -33, layer: 2 },
+        { id: 's2', kind: 'shrimp', k: 1.1, x: 130, y: -33, layer: 2 },
+        { id: 'batter', kind: 'batter', k: 0.8, x: 0, y: -5, layer: 3 },
+        { id: 'mayo', kind: 'mayo', k: 0.8, x: 0, y: -5, layer: 4 }]
     },
     beefBowl: {
       name: '牛肉盖饭', theme: 'beefBowl', pieces: [
+        // 米饭居中，红烧肉盖在饭上，青菜是盘边配菜
         { id: 'plate', kind: 'plate', x: 0, y: 0, layer: 0 },
-        { id: 'rice', kind: 'rice', x: 0, y: 40, layer: 1 },
-        { id: 'b1', kind: 'beef', x: -105, y: 10, layer: 2 },
-        { id: 'b2', kind: 'beef', x: 105, y: 10, layer: 2 },
-        { id: 'greens', kind: 'greens', x: 0, y: -40, layer: 3 },
-        { id: 'scallion', kind: 'scallion', x: 0, y: 30, layer: 4 }]
+        { id: 'rice', kind: 'rice', k: 0.8, x: 30, y: 28, layer: 1 },
+        { id: 'greens', kind: 'greens', k: 0.6, x: -160, y: -8, layer: 1 },
+        { id: 'b1', kind: 'beef', k: 0.7, x: -2, y: -12, layer: 2 },
+        { id: 'b2', kind: 'beef', k: 0.7, x: 78, y: 10, layer: 2 },
+        { id: 'scallion', kind: 'scallion', k: 0.5, x: 30, y: -5, layer: 3 }]
     },
     eggNoodle: {
       name: '番茄蛋汤面', theme: 'eggNoodle', pieces: [
         { id: 'bowl', kind: 'soupBowl', x: 0, y: 0, layer: 0 },
-        { id: 'noodles', kind: 'noodles', x: 0, y: -112, layer: 1 },
-        { id: 'tomato', kind: 'tomato', x: -115, y: -135, layer: 2 },
-        { id: 'eggs', kind: 'eggs', x: 105, y: -128, layer: 2 },
-        { id: 'scallion', kind: 'scallion', x: 10, y: -95, layer: 3 }]
+        { id: 'noodles', kind: 'noodles', k: 0.75, x: 0, y: -45, layer: 1 },
+        { id: 'tomato', kind: 'tomato', k: 0.62, x: -66, y: -80, layer: 2 },
+        { id: 'eggs', kind: 'eggs', k: 0.58, x: 66, y: -80, layer: 2 },
+        { id: 'scallion', kind: 'scallion', k: 0.5, x: 0, y: -60, layer: 3 }]
     },
     homeStir: {
       name: '家常小炒', theme: 'homeStir', pieces: [
+        // 左边番茄炒蛋（蛋盖在番茄边上），右边红烧肉，青菜立在肉后面
         { id: 'plate', kind: 'plate', x: 0, y: 0, layer: 0 },
-        { id: 'tomato', kind: 'tomato', x: -125, y: -15, layer: 1 },
-        { id: 'eggs', kind: 'eggs', x: 115, y: 0, layer: 1 },
-        { id: 'beef', kind: 'beef', x: 0, y: 65, layer: 2 },
-        { id: 'greens', kind: 'greens', x: 0, y: -70, layer: 2 },
-        { id: 'scallion', kind: 'scallion', x: 10, y: 15, layer: 3 }]
+        { id: 'tomato', kind: 'tomato', k: 0.7, x: -120, y: -5, layer: 1 },
+        { id: 'greens', kind: 'greens', k: 0.6, x: 128, y: -42, layer: 1 },
+        { id: 'eggs', kind: 'eggs', k: 0.62, x: -35, y: 12, layer: 2 },
+        { id: 'beef', kind: 'beef', k: 0.65, x: 118, y: 38, layer: 2 },
+        { id: 'scallion', kind: 'scallion', k: 0.45, x: -60, y: -5, layer: 3 }]
     },
     cozyCorner: {
       name: '小憩一角', theme: 'cozyCorner', pieces: [

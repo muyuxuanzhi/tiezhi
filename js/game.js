@@ -32,16 +32,16 @@
       var slot = G.seq || n === 1 ? SLOTS[1][0] : SLOTS[n][i];
       var s = Math.min(slot.w / bb.w, slot.h / bb.h, 0.8);
       wd.pieces.forEach(function (p) {
-        var v = TZ.vis(p.kind);
-        s = Math.min(s, 424 / v.w, 232 / v.h);
+        var v = TZ.vis(p.kind), k = p.k || 1;
+        s = Math.min(s, 424 / (v.w * k), 232 / (v.h * k));
       });
       var w = { wid: wid, wi: i, def: wd, name: wd.name, s: s, slot: slot, pieces: [], done: false, errs: 0 };
       var cx = slot.x + slot.w / 2, cy = slot.y + slot.h / 2;
       wd.pieces.forEach(function (p) {
-        var v = TZ.vis(p.kind);
+        var v = TZ.vis(p.kind), k = p.k || 1;
         w.pieces.push({
-          id: p.id, kind: p.kind, layer: p.layer, depIds: p.deps, w: w, wi: i, filled: false, pend: false, by: null,
-          sx: cx + (p.x - bb.cx) * s, sy: cy + (p.y - bb.cy) * s, vw: v.w * s, vh: v.h * s
+          id: p.id, kind: p.kind, layer: p.layer, depIds: p.deps, w: w, wi: i, filled: false, pend: false, by: null, k: k,
+          sx: cx + (p.x - bb.cx) * s, sy: cy + (p.y - bb.cy) * s, vw: v.w * s * k, vh: v.h * s * k
         });
       });
       w.pieces.forEach(function (t) {
@@ -54,7 +54,7 @@
     G.works.forEach(function (w) {
       w.pieces.forEach(function (t) {
         var v = TZ.vis(t.kind);
-        G.stickers.push({ uid: uid++, wi: w.wi, kind: t.kind, s: w.s, vw: v.w * w.s, vh: v.h * w.s, state: 'page', wear: 0 });
+        G.stickers.push({ uid: uid++, wi: w.wi, kind: t.kind, s: w.s * t.k, vw: v.w * w.s * t.k, vh: v.h * w.s * t.k, state: 'page', wear: 0 });
       });
     });
     (def.decoys || []).forEach(function (k) {
@@ -234,7 +234,7 @@
       w.pieces.forEach(function (t) {
         var e = el('div', 'tgt'); pos(e, t.sx - t.vw / 2, t.sy - t.vh / 2, t.vw, t.vh);
         e.style.zIndex = t.layer * 10 + 1;
-        var g = TZ.makeStk(t.kind, w.s, 0); g.classList.add('ghost'); e.appendChild(g);
+        var g = TZ.makeStk(t.kind, w.s * t.k, 0); g.classList.add('ghost'); e.appendChild(g);
         t.ghostEl = g; t.el = e; U.tgt.appendChild(e);
       });
     });
@@ -662,7 +662,7 @@
     };
   }
   function showPlaced(t) {
-    var e = TZ.makeStk(t.kind, t.w.s, G.paper); e.classList.add('placed'); TZ.creaseFx(e, t.by && t.by.cr);
+    var e = TZ.makeStk(t.kind, t.w.s * t.k, G.paper); e.classList.add('placed'); TZ.creaseFx(e, t.by && t.by.cr);
     t.el.appendChild(e); t.placedEl = e; t.ghostEl.style.display = 'none';
     if (t.pendEl) { t.pendEl.remove(); t.pendEl = null; }
     TZ.audio.soft();
@@ -822,7 +822,7 @@
   function assignTarget(i, t) {
     var hand = G.hand, st = hand.sel[i];
     t.pend = true; t.pendSt = st; hand.assign[i] = t; hand.armed = -1;
-    var e = TZ.makeStk(t.kind, t.w.s, G.paper); e.classList.add('pending'); t.el.appendChild(e); t.pendEl = e;
+    var e = TZ.makeStk(t.kind, t.w.s * t.k, G.paper); e.classList.add('pending'); t.el.appendChild(e); t.pendEl = e;
     TZ.audio.play('snap', 0.5);
     hud(); setHint();
   }
