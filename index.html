@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#b9762d">
+<title>贴纸拼拼乐</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23e8715f'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="stage">
+  <img id="book" src="assets/img/book.png" alt="" draggable="false">
+  <div id="screen"></div>
+  <div id="top" class="panel">
+    <div id="title">贴纸拼拼乐</div>
+    <div id="subtitle">生活手账</div>
+    <div id="pts" class="pill">0 积分</div>
+    <button id="btn-sound" class="btn green">声音</button>
+    <button id="btn-pause" class="btn green" style="display:none">II</button>
+  </div>
+  <div id="toast"></div>
+  <div id="modals"></div>
+  <div id="loading"><div><b>贴纸拼拼乐</b><span id="load-text">正在翻开手账…</span></div></div>
+</div>
+<div id="rotate-tip">竖屏也能玩，但横屏拼贴更舒服。请把手机横过来。</div>
+<script src="js/data.js"></script>
+<script src="js/core.js"></script>
+<script src="js/game.js"></script>
+<script src="js/screens.js"></script>
+<script src="js/journal.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
