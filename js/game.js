@@ -9,6 +9,8 @@
     3: [{ x: 650, y: 290, w: 240, h: 100, ly: 250 }, { x: 900, y: 290, w: 240, h: 100, ly: 250 }, { x: 775, y: 424, w: 240, h: 92, ly: 392 }]
   };
   var G = null;
+  // 右页下沿的暂存格（叠页谜题关）
+  var STASH = [{ x: 668, y: 494, w: 206, h: 46 }, { x: 890, y: 494, w: 206, h: 46 }];
 
   function pad(n) { return n < 10 ? '0' + n : '' + n; }
   function isDouble() { return G.def.mode === 2; }
@@ -16,12 +18,40 @@
   function totalPieces() { var n = 0; G.works.forEach(function (w) { n += w.pieces.length; }); return n; }
   function filledCount(list) { var n = 0; list.forEach(function (w) { w.pieces.forEach(function (p) { if (p.filled) n++; }); }); return n; }
   function stickerName(st) { return TZ.KIND_NAME[st.kind]; }
+  // 叠压：上面那张还在页上（或双镊子里尚未确认揭起）时，下面的撕不动
+  function isCovered(st) {
+    var a = st.above; if (!a) return false;
+    return a.state === 'page' || (a.state === 'selected' && !G.hand.confirmed);
+  }
+  function pairOk(a, b) {
+    var r = G.def.pair;
+    if (r === 'diffWork') return a.wi !== b.wi;
+    if (r === 'bigSmall') return !!a.big !== !!b.big;
+    return true;
+  }
+  function pairMsg(short) {
+    var t = G.def.pair === 'diffWork' ? '同批两张须来自不同作品' : '同批两张须一大一小';
+    return short ? '规则：' + t : '配对规则：' + t + '。';
+  }
+  function stashAt(x, y) {
+    for (var i = 0; i < STASH.length; i++) {
+      var r = STASH[i]; if (x >= r.x - 6 && x <= r.x + r.w + 6 && y >= r.y - 6 && y <= r.y + r.h + 6) return i;
+    }
+    return -1;
+  }
+  function freeStash(pref, skip) {
+    var res = {};
+    if (isDouble()) G.hand.sel.forEach(function (s) { if (s !== skip && s.fromStash && s.stashHome >= 0) res[s.stashHome] = 1; });
+    if (pref >= 0 && !G.stash[pref] && !res[pref]) return pref;
+    for (var i = 0; i < G.stash.length; i++) if (!G.stash[i] && !res[i]) return i;
+    return -1;
+  }
 
   /* ================= 构建 ================= */
   function buildState(def, teach, keepTicket) {
     G = {
-      def: def, teach: teach, seq: def.mode === 1 && def.works.length > 1, steps: 0, errors: 0, decoyErrs: 0,
-      works: [], stickers: [], pages: [], page: 0, stageIdx: 0, hot: null, gesture: null, floats: [], parked: null,
+      def: def, teach: teach, puz: !!def.puzzle, seq: def.mode === 1 && def.works.length > 1 && !def.puzzle, steps: 0, errors: 0, decoyErrs: 0,
+      works: [], stickers: [], pages: [], page: 0, stageIdx: 0, hot: null, gesture: null, floats: [], parked: null, stash: [null, null],
       hand: { sel: [], confirmed: false, assign: [], armed: -1 }, paused: false, over: false, busy: 0,
       ticketOn: !!keepTicket, ui: {}, tw: TZ.TWEEZERS[TZ.S.equip.t], paper: TZ.S.equip.p, firstPeel: false,
       pairPeels: 0
@@ -30,7 +60,8 @@
     def.works.forEach(function (wid, i) {
       var wd = TZ.WORKS[wid], bb = TZ.workBox(wid);
       var slot = G.seq || n === 1 ? SLOTS[1][0] : SLOTS[n][i];
-      var s = Math.min(slot.w / bb.w, slot.h / bb.h, 0.8);
+      if (def.puzzle) slot = { x: slot.x, y: slot.y, w: slot.w, h: slot.h - 36, ly: slot.ly };
+      var s = Math.min(slot.w / bb.w, slot.h / bb.h, def.puzzle ? (n > 1 ? 0.34 : wd.pieces.length >= 5 ? 0.4 : 0.5) : 0.8);
       wd.pieces.forEach(function (p) {
         var v = TZ.vis(p.kind), k = p.k || 1;
         s = Math.min(s, 424 / (v.w * k), 232 / (v.h * k));
@@ -40,7 +71,7 @@
       wd.pieces.forEach(function (p) {
         var v = TZ.vis(p.kind), k = p.k || 1;
         w.pieces.push({
-          id: p.id, kind: p.kind, layer: p.layer, depIds: p.deps, w: w, wi: i, filled: false, pend: false, by: null, k: k,
+          id: p.id, key: i + '.' + p.id, kind: p.kind, layer: p.layer, depIds: p.deps, w: w, wi: i, filled: false, pend: false, by: null, k: k,
           sx: cx + (p.x - bb.cx) * s, sy: cy + (p.y - bb.cy) * s, vw: v.w * s * k, vh: v.h * s * k
         });
       });
@@ -54,9 +85,14 @@
     G.works.forEach(function (w) {
       w.pieces.forEach(function (t) {
         var v = TZ.vis(t.kind);
-        G.stickers.push({ uid: uid++, wi: w.wi, kind: t.kind, s: w.s * t.k, vw: v.w * w.s * t.k, vh: v.h * w.s * t.k, state: 'page', wear: 0 });
+        var sk = { uid: uid++, key: t.key, piece: t, wi: w.wi, kind: t.kind, s: w.s * t.k, vw: v.w * w.s * t.k, vh: v.h * w.s * t.k, state: 'page', wear: 0, above: null, below: null, depth: 0 };
+        t.st = sk; G.stickers.push(sk);
       });
     });
+    if (def.pair === 'bigSmall') {
+      G.stickers.slice().sort(function (a, b) { return b.vw * b.vh - a.vw * a.vh || a.uid - b.uid; })
+        .forEach(function (st, i) { st.big = i < Math.ceil(G.stickers.length / 2); });
+    }
     (def.decoys || []).forEach(function (k) {
       var v = TZ.vis(k), s = G.works[0].s;
       G.stickers.push({ uid: uid++, wi: -1, kind: k, s: s, vw: v.w * s, vh: v.h * s, state: 'page', wear: 0 });
@@ -66,22 +102,40 @@
       var rnd = TZ.seeded((teach ? 100 : 0) + def.id + 7);
       for (var i = order.length - 1; i > 0; i--) { var j = Math.floor(rnd() * (i + 1)); var t = order[i]; order[i] = order[j]; order[j] = t; }
     }
-    paginate(order);
+    var units;
+    if (def.puzzle) {
+      // 叠压：piles 里每组从上到下列出，只有最上面的一张能撕；其余单张散放
+      var byKey = {}, used = {};
+      G.stickers.forEach(function (s) { byKey[s.key] = s; });
+      units = [];
+      (def.piles || []).forEach(function (chain) {
+        var u = chain.map(function (k) { used[k] = 1; return byKey[k]; });
+        u.forEach(function (s, i) { s.above = i ? u[i - 1] : null; s.below = u[i + 1] || null; });
+        units.push(u);
+      });
+      order.forEach(function (s) { if (!used[s.key]) units.push([s]); });
+    } else units = order.map(function (s) { return [s]; });
+    paginate(units);
   }
 
-  function paginate(list) {
-    var gap = 16, rowGap = 8, labH = 22;
+  function paginate(units) {
+    var gap = 16, rowGap = 8, labH = 22, OX = 26, OY = 20;
+    units.forEach(function (u) {
+      var n = u.length, mw = 0, mh = 0;
+      u.forEach(function (st) { mw = Math.max(mw, st.vw); mh = Math.max(mh, st.vh); });
+      u.hd = n > 1 ? 18 : 0; u.w = Math.max(mw + OX * (n - 1), 60); u.h = mh + OY * (n - 1) + u.hd;
+    });
     var pages = [], cur = { rows: [], h: 0 }, row = { items: [], w: 0, h: 0 };
     function closeRow() {
       if (!row.items.length) return;
       if (cur.rows.length && cur.h + rowGap + row.h > AREA.h) { pages.push(cur); cur = { rows: [], h: 0 }; }
       cur.h += (cur.rows.length ? rowGap : 0) + row.h; cur.rows.push(row); row = { items: [], w: 0, h: 0 };
     }
-    list.forEach(function (st) {
-      var cw = Math.max(st.vw, 60), ch = st.vh + labH;
+    units.forEach(function (u) {
+      var cw = u.w, ch = u.h + labH;
       if (row.items.length && row.w + gap + cw > AREA.w) closeRow();
       row.w += (row.items.length ? gap : 0) + cw; row.h = Math.max(row.h, ch);
-      row.items.push({ st: st, cw: cw });
+      row.items.push({ u: u, cw: cw });
     });
     closeRow(); if (cur.rows.length) pages.push(cur);
     pages.forEach(function (pg) {
@@ -89,8 +143,13 @@
       pg.rows.forEach(function (r) {
         var x = AREA.x + (AREA.w - r.w) / 2;
         r.items.forEach(function (it) {
-          it.st.cell = { x: x + (it.cw - it.st.vw) / 2, y: y + (r.h - labH - it.st.vh) / 2 };
-          pg.items.push(it.st); x += it.cw + gap;
+          var u = it.u, n = u.length, top = y + (r.h - labH - u.h) / 2 + u.hd, cy = top + (u.h - u.hd) / 2, cx = x + it.cw / 2;
+          u.forEach(function (st, i) {
+            var d = n - 1 - i; st.depth = d;
+            st.cell = { x: cx + (d - (n - 1) / 2) * OX - st.vw / 2, y: cy + (d - (n - 1) / 2) * OY - st.vh / 2 };
+            pg.items.push(st);
+          });
+          x += it.cw + gap;
         });
         y += r.h + rowGap;
       });
@@ -118,7 +177,7 @@
     U.pMid = pill(sc, 667, 86, 346, 37, '', 'left');
     U.pRight = pill(sc, 1055, 86, 143, 37, '', 'center');
 
-    U.lTitle = label(sc, 'h-title', 141, 154, 420, isDouble() ? '配成一对，更省一步' : '挑一张，慢慢贴');
+    U.lTitle = label(sc, 'h-title', 141, 154, 420, G.puz ? (G.def.pair ? '压叠 · 配对 · 暂存' : '最上面的，才撕得动') : isDouble() ? '配成一对，更省一步' : '挑一张，慢慢贴');
     U.lCount = label(sc, 'h-sub', 141, 204, 200, '');
     sc.appendChild(pos(el('div', 'hr'), 141, 235, 434));
     sc.appendChild(pos(el('div', 'hr'), 652, 235, 483));
@@ -135,6 +194,13 @@
     }
     U.src = el('div', 'layer'); sc.appendChild(U.src);
     U.tgt = el('div', 'layer'); sc.appendChild(U.tgt);
+    if (G.puz) {
+      U.stash = STASH.map(function (r, i) {
+        var s = el('div', 'stash'); pos(s, r.x, r.y, r.w, r.h);
+        s.addEventListener('pointerdown', function (e) { onStashDown(e, i); });
+        sc.appendChild(s); return s;
+      });
+    }
     U.btnPrev = TZ.btn('上一页', 'green', 128, 543, 126, 34, function () { flip(-1); });
     U.pageLab = el('div', 'pill2 center white'); pos(U.pageLab, 283, 543, 135, 34); U.pageLab.style.lineHeight = '34px';
     U.btnNext = TZ.btn('下一页', 'green', 448, 543, 124, 34, function () { flip(1); });
@@ -163,6 +229,7 @@
 
     renderTargets();
     renderSource();
+    renderStash();
     hud();
     setHint();
 
@@ -170,7 +237,7 @@
     var onMove = function (e) { gestureMove(e); };
     var onUp = function (e) { gestureUp(e); };
     var onTap = function (e) {
-      if (e.target.closest && e.target.closest('.btn,.cell,.held,.slot,.modal')) return;
+      if (e.target.closest && e.target.closest('.btn,.cell,.held,.slot,.stash,.modal')) return;
       var q = TZ.toStage(e); if (q.x > 620 && q.y > 130 && q.y < 600) tapRight(e);
     };
     window.addEventListener('pointermove', onMove);
@@ -198,6 +265,9 @@
       '<p>2. 把贴纸拖到右页对应的轮廓上松手贴下（也可以松手后轻点想贴的位置）。拖回左页就是归还。</p>' +
       '<p>3. 层次先下后上，同层不限先后；天妇罗的每张面团要等它对应的虾仁。揭起一次算 1 步，贴放一次算 1 步。</p>' +
       (isDouble() ? '<p>4. 双镊子：先揭起 1～2 张放进 A、B 格，点「揭起」确认；再把它们分别对位，点「同时贴上」整批判定，任一张错误整批都不贴入。</p>' : '') +
+      (G.puz ? '<p>叠页规则：左页的贴纸互相压着，<b>只有最上面那张能撕</b>，撕走后下面一张才露出来。压叠的顺序可能和右页「先下后上」的贴放顺序冲突——这时把撕下的贴纸先放进右页下沿的<b>暂存格</b>（共 2 格，暂存多花 1 步），等轮到它时再从暂存格拿出来贴。从暂存格取出不耗步数；单镊子手里同时只能拿 1 张。</p>' +
+        (G.def.pair === 'diffWork' ? '<p>配对规则：同一批的两张必须来自<b>不同作品</b>；两张都必须在这一批开始前就已露出。</p>' : '') +
+        (G.def.pair === 'bigSmall' ? '<p>配对规则：同一批的两张必须<b>一大一小</b>（贴纸下方标有「大」或「小」）；两张都必须在这一批开始前就已露出。</p>' : '') : '') +
       '<p>翻页不耗步数。' + (G.def.budget ? '本关限 ' + G.def.budget + ' 步。' : '') + '</p>';
     TZ.modal('怎么玩', tx, [{ t: '知道啦' }]);
   }
@@ -253,22 +323,33 @@
     if (!pg) return;
     var multi = G.works.length > 1;
     pg.stickers.forEach(function (st) {
-      var c = el('div', 'cell'); pos(c, st.cell.x, st.cell.y, st.vw, st.vh);
       var holder = st.state === 'page';
+      if (G.puz && !holder) return;
+      var covered = holder && isCovered(st);
+      var c = el('div', 'cell'); pos(c, st.cell.x, st.cell.y, st.vw, st.vh);
+      c.style.zIndex = 10 + st.depth;
       var stk = TZ.makeStk(st.kind, st.s, holder ? G.paper : 0);
       if (!holder) stk.classList.add('hole');
-      else {
+      else if (covered) {
+        c.classList.add('live', 'covered'); stk.classList.add('under');
+        c.addEventListener('pointerdown', function (e) {
+          if (e.button > 0) return; e.preventDefault();
+          setHint('「' + stickerName(st) + '」被「' + stickerName(st.above) + '」压着，先把上面那张撕走。', true);
+        });
+      } else {
         c.classList.add('live'); st.cellEl = c;
         c.addEventListener('pointerdown', function (e) { onCellDown(e, st, c); });
         TZ.creaseFx(stk, st.cr);
       }
       c.appendChild(stk);
-      var lab = el('div', 'clab', (multi && st.wi >= 0 ? (st.wi + 1) + '·' : '') + stickerName(st));
-      pos(lab, -30, st.vh + 3, st.vw + 60); c.appendChild(lab);
+      var tag = (multi && st.wi >= 0 ? (st.wi + 1) + '·' : '') + stickerName(st) + (G.def.pair === 'bigSmall' ? (st.big ? ' [大]' : ' [小]') : '');
+      var lab = el('div', 'clab' + (covered ? ' up' : ''), tag);
+      if (covered) { pos(lab, 0, -18, 10); lab.style.width = 'auto'; } else pos(lab, -30, st.vh + 3, st.vw + 60);
+      c.appendChild(lab);
       U.src.appendChild(c);
     });
     if (TZ.S.stats.peels < 8 && G.steps === 0 && !G.hand.sel.length && !G.parked) {
-      var first = pg.stickers.filter(function (s) { return s.state === 'page'; })[0];
+      var first = pg.stickers.filter(function (s) { return s.state === 'page' && s.cellEl && !isCovered(s); })[0];
       if (first && first.cellEl) {
         var tut = el('div', 'tut'); first.cellEl.appendChild(tut);
         tut.style.left = first.vw / 2 - 45 + 'px'; tut.style.top = first.vh / 2 - 45 + 'px';
@@ -283,6 +364,22 @@
     var np = clamp(G.page + d, 0, G.pages.length - 1);
     if (np === G.page) return;
     G.page = np; renderSource();
+  }
+
+  function renderStash() {
+    var U = G.ui; if (!U.stash) return;
+    U.stash.forEach(function (s, i) {
+      var st = G.stash[i]; s.innerHTML = '';
+      s.className = 'stash' + (st ? ' full' : '');
+      if (!st) { s.appendChild(el('span', '', '暂存格 ' + (i + 1) + ' · 空')); return; }
+      var v = TZ.vis(st.kind), k = Math.min(32 / v.h, 70 / v.w);
+      var thumb = TZ.makeStk(st.kind, k, G.paper); thumb.classList.add('thumb'); s.appendChild(thumb);
+      s.appendChild(el('span', 'sl-t', (G.works.length > 1 ? (st.wi + 1) + '·' : '') + stickerName(st)));
+    });
+  }
+  function stashHot(on) {
+    var U = G.ui; if (!U.stash) return;
+    U.stash.forEach(function (s, i) { s.classList.toggle('hot', on === i); });
   }
 
   function hud() {
@@ -335,8 +432,9 @@
     if (!text) {
       if (G.teach && d.id === 0 && G.steps === 0) text = d.hint0;
       else if (G.teach && d.hint) text = d.hint;
+      else if (G.puz && !G.parked) text = (isDouble() ? pairMsg(true) : '只有最上面的能撕') + ' · 暂存格放 2 张，暂存多花 1 步';
       else if (isDouble()) text = '跨作品配成一对 · 同撕 1 步 + 同贴 1 步';
-      else if (G.parked) text = '拖到右页的轮廓上松手，或轻点想贴的位置；拖回左页可以归还。';
+      else if (G.parked) text = G.puz ? '拖到右页轮廓上松手贴下，或拖进暂存格（多花 1 步）。' : '拖到右页的轮廓上松手，或轻点想贴的位置；拖回左页可以归还。';
       else text = '按住贴纸，向左右或上下缓缓滑动撕开；半途松手会留折痕。';
     }
     U.hint.textContent = text; U.hint.classList.toggle('bad', !!bad);
@@ -359,6 +457,8 @@
       else if (isDouble() && G.hand.sel.length >= 2) setHint('两把镊子都满了，点「揭起」确认。', true);
       return;
     }
+    if (isCovered(st)) { setHint('先把压在上面的「' + stickerName(st.above) + '」撕走。', true); return; }
+    if (G.def.pair && isDouble() && G.hand.sel.length === 1 && !pairOk(G.hand.sel[0], st)) { setHint(pairMsg(), true); TZ.audio.play('error', 0.5); return; }
     e.preventDefault();
     var p = TZ.toStage(e);
     G.gesture = { kind: 'peel', st: st, cell: cellEl, sx: p.x, sy: p.y, lx: p.x, ly: p.y, lt: performance.now(), id: e.pointerId, touch: e.pointerType === 'touch', ox: 0, oy: 0,
@@ -421,6 +521,7 @@
       var h = g.held;
       h.px = p.x; h.py = p.y; h.vx = sp;
       updateHot(h);
+      if (G.puz) stashHot(stashAt(p.x, p.y));
     }
   }
 
@@ -563,7 +664,7 @@
       if (t) { t.el.classList.add('hot'); TZ.audio.play('snap', 0.45); }
     }
   }
-  function clearHot() { if (G.hot) { G.hot.el.classList.remove('hot'); G.hot = null; } }
+  function clearHot() { if (G.hot) { G.hot.el.classList.remove('hot'); G.hot = null; } if (G.puz) stashHot(-1); }
 
   /* 目标查找：只对「食材、作品、层次」都允许的目标吸附 */
   function allowed(st, t) {
@@ -597,10 +698,38 @@
     clearHot(); h.dragging = false;
     var st = h.st, cx = h.px + h.ox, cy = h.py + h.oy;
     if (isDouble()) return dropDouble(h, cx, cy, forcePark);
-    if (!forcePark && cx < 612 && cy > 120 && cy < 600) { returnSingle(h); return; }
+    if (G.puz && !forcePark) {
+      var si = stashAt(h.px, h.py);
+      if (h.tap0 && si === h.tap0.idx && Math.hypot(h.px - h.tap0.x, h.py - h.tap0.y) < 10) {
+        // 只是点了一下：把贴纸取到手里，挪到右页中间等着贴
+        h.tap0 = null; parkAt(h, 910, 360); return;
+      }
+      if (si >= 0) { stashSingle(h, si); return; }
+    }
+    if (!forcePark && !st.fromStash && cx < 612 && cy > 120 && cy < 600) { returnSingle(h); return; }
     if (forcePark) { parkHeld(h); return; }
     attemptSingle(h, cx, cy);
   }
+  /* 暂存：从页上撕下的贴纸放进暂存格多花 1 步；从暂存格取出的再放回不收费 */
+  function parkAt(h, x, y, msg) {
+    h.dragging = true; h.ox = 0; h.oy = 0; h.px = x; h.py = y; G.busy++;
+    setTimeout(function () {
+      G.busy--; if (h.dead || G.over) return;
+      h.dragging = false; parkHeld(h); if (msg) setHint(msg, true);
+    }, 340);
+  }
+  function stashSingle(h, pref) {
+    var st = h.st, idx = freeStash(pref);
+    if (idx < 0) { TZ.audio.play('error', 0.5); parkAt(h, 910, 360, '暂存格都满了，先把里面的贴上。'); setHint('暂存格都满了，先把里面的贴上。', true); return; }
+    if (!st.fromStash) G.steps++;
+    st.state = 'stashed'; G.stash[idx] = st; G.parked = null;
+    TZ.audio.soft();
+    var c = stashCenter(idx);
+    flyTo(h, c.x, c.y, function () { renderStash(); hud(); setHint(); checkFail(); });
+    h.el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, fill: 'forwards' });
+    renderStash(); hud();
+  }
+  function stashCenter(i) { var r = STASH[i]; return { x: r.x + r.w / 2, y: r.y + r.h / 2 }; }
   function parkHeld(h) {
     G.parked = h; h.parked = true; h.el.classList.add('parked');
     h.px = h.x - h.ox; h.py = h.y - h.oy;
@@ -703,7 +832,25 @@
     if (!d.budget || G.over) return;
     var rest = totalPieces() - filledCount(G.works);
     var inRound = G.hand.confirmed || G.parked;
-    if (rest > 0 && !inRound && G.steps + 2 > d.budget) {
+    var need = 2;
+    if (G.puz) {
+      if (G.gesture) return;
+      // 按每张贴纸当前位置估算最少还要几步：页上 2 步（揭+贴），暂存/手里 1 步
+      need = 0;
+      var onPage = 0;
+      G.stickers.forEach(function (s) {
+        if (s.state === 'page') { onPage++; if (!isDouble()) need += 2; }
+        else if (s.state === 'stashed' || s.state === 'held') need += 1;
+      });
+      if (isDouble()) {
+        // 下限：揭起批数 + 贴放批数，每批最多 2 张
+        var hs = G.hand.confirmed ? G.hand.sel.length : 0, p = onPage + (G.hand.confirmed ? 0 : G.hand.sel.length);
+        var sn = G.stash.filter(Boolean).length;
+        need = Math.ceil((p + sn) / 2) + Math.ceil((p + sn + hs) / 2);
+      }
+      inRound = false;
+    }
+    if (rest > 0 && !inRound && G.steps + need > d.budget) {
       G.over = true;
       TZ.audio.play('error');
       TZ.modal('步数用完啦', '<p>这一桌需要在 ' + d.budget + ' 步内贴完，还差 ' + rest + ' 张。换个配对的方式再来一次吧。</p><p>已收藏的作品和已消费的加映券保留。</p>', [
@@ -743,6 +890,36 @@
     TZ.audio.rustleStart(TZ.PAPERS[G.paper].mat);
   }
 
+  /* 暂存格：点一下或拖出来取回（取回不耗步数）；单镊子手里有贴纸时，点空格即可暂存 */
+  function onStashDown(e, i) {
+    if (e.button > 0) return;
+    if (G.paused || G.over || G.gesture || G.busy > 0) return;
+    TZ.audio.init(); e.preventDefault(); e.stopPropagation();
+    var st = G.stash[i], p = TZ.toStage(e);
+    if (!st) {
+      if (!isDouble() && G.parked) stashSingle(G.parked, i);
+      else setHint(isDouble() ? '先点「揭起」，再把贴纸拖进暂存格。' : '把撕下的贴纸拖到这里就能暂存。');
+      return;
+    }
+    if (isDouble()) {
+      var hand = G.hand;
+      if (hand.confirmed) { setHint('这一批已经揭起了，先贴完或撤回，再取暂存格里的。', true); return; }
+      if (hand.sel.length >= 2) { setHint('两把镊子都满了，点「揭起」确认。', true); return; }
+      if (hand.sel.length === 1 && !pairOk(hand.sel[0], st)) { setHint(pairMsg(), true); TZ.audio.play('error', 0.5); return; }
+      G.stash[i] = null; st.state = 'selected'; st.fromStash = true; st.stashHome = i; hand.sel.push(st);
+      TZ.audio.soft(); renderStash(); renderSource(); hud(); setHint('从暂存格取出了「' + stickerName(st) + '」，点「揭起」确认这一批。');
+      return;
+    }
+    if (G.parked) { setHint('先把手里的贴纸贴上，或放进暂存格。', true); return; }
+    G.stash[i] = null; st.state = 'held'; st.fromStash = true;
+    var c = stashCenter(i), h = makeHeld(st, c.x, c.y);
+    h.ox = c.x - p.x; h.oy = c.y - p.y; h.px = p.x; h.py = p.y; h.touch = e.pointerType === 'touch'; h.dragging = true; h.sc = 1.01;
+    h.tap0 = { x: p.x, y: p.y, idx: i };
+    G.gesture = { kind: 'drag', held: h, id: e.pointerId, lx: p.x, ly: p.y, lt: performance.now() };
+    TZ.audio.rustleStart(TZ.PAPERS[G.paper].mat);
+    renderStash(); hud();
+  }
+
   /* ================= 双镊子 ================= */
   function slotIndex(st) { return G.hand.sel.indexOf(st); }
 
@@ -752,14 +929,33 @@
     if (!hand.confirmed) {
       // 选择阶段：松手放进镊子槽，或拖回左页归还
       if (!forcePark && cx < 612 && cy > 120 && cy < 600) { returnSelected(st, h); return; }
+      if (G.puz && !forcePark && stashAt(h.px, h.py) >= 0) setHint('先点「揭起」确认，再把贴纸拖进暂存格。', true);
       toSlot(h, i); return;
     }
     // 已揭起：尝试对位
     if (forcePark) { toSlot(h, i); return; }
+    if (G.puz) {
+      var si = stashAt(h.px, h.py);
+      if (si >= 0) { stashFromHand(h, i, si); return; }
+    }
     var r = findTarget(st, cx, cy);
     if (r.t) { toSlotThenAssign(h, i, r.t); return; }
     if (r.bad) errorFx(h, r.bad);
     toSlot(h, i);
+  }
+  /* 双镊子：已揭起的贴纸可以拖进暂存格，耗 1 步 */
+  function stashFromHand(h, i, pref) {
+    var hand = G.hand, st = h.st, idx = freeStash(pref, st);
+    if (idx < 0) { setHint('暂存格都满了，先把里面的贴上。', true); TZ.audio.play('error', 0.5); toSlot(h, i); return; }
+    unassign(i);
+    hand.sel.splice(i, 1); hand.assign.splice(i, 1); hand.armed = -1; hand.usedStash = true;
+    G.steps++; st.state = 'stashed'; G.stash[idx] = st; st.stashHome = -1;
+    if (!hand.sel.length) { hand.confirmed = false; hand.usedStash = false; }
+    TZ.audio.soft();
+    var c = stashCenter(idx);
+    flyTo(h, c.x, c.y, function () { renderStash(); renderSource(); hud(); setHint(); checkFail(); });
+    h.el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, fill: 'forwards' });
+    renderStash(); hud();
   }
   function slotCenter(i) { return { x: 75 + i * 175 + 80, y: 637 }; }
   function toSlot(h, i) {
@@ -771,9 +967,18 @@
   function toSlotThenAssign(h, i, t) {
     removeHeld(h); assignTarget(i, t);
   }
+  // 从暂存格取来的贴纸放回去：不扣折痕、不记归还
+  function backToStash(st, h) {
+    var idx = st.stashHome >= 0 && !G.stash[st.stashHome] ? st.stashHome : freeStash(-1);
+    st.fromStash = false; st.state = 'stashed'; G.stash[idx] = st;
+    if (h) { var c = stashCenter(idx); flyTo(h, c.x, c.y, function () { renderStash(); renderSource(); hud(); setHint(); }); }
+    else { renderStash(); renderSource(); hud(); setHint(); }
+    TZ.audio.soft();
+  }
   function returnSelected(st, h) {
     var hand = G.hand, i = hand.sel.indexOf(st);
     if (i >= 0) { hand.sel.splice(i, 1); hand.assign.splice(i, 1); }
+    if (st.fromStash) { backToStash(st, h); return; }
     st.state = 'page'; TZ.S.stats.returns++; addCrease(st, '放回去也会折到纸，'); TZ.persist();
     if (G.page !== st.page) { G.page = st.page; renderSource(); }
     if (h) flyTo(h, st.cell.x + st.vw / 2, st.cell.y + st.vh / 2, function () { renderSource(); hud(); });
@@ -814,9 +1019,10 @@
     var hand = G.hand;
     if (hand.confirmed || !hand.sel.length) return;
     if (G.def.budget && G.steps + 2 > G.def.budget) { setHint('步数不够再揭起一批了。', true); return; }
-    G.steps++; hand.confirmed = true;
+    G.steps++; hand.confirmed = true; hand.usedStash = false;
     if (hand.sel.length === 2) { TZ.S.stats.pairs++; TZ.persist(); }
     TZ.audio.play('peel', 0.6);
+    if (G.puz) renderSource();
     hud(); setHint('把 A、B 分别对位到右页的轮廓，再点「同时贴上」。');
   }
   function assignTarget(i, t) {
@@ -860,16 +1066,24 @@
       var h = makeHeld(it.st, c.x, c.y); h.sc = 1;
       applyPlace(h, t, k * 90);
     });
-    hand.sel = []; hand.assign = []; hand.confirmed = false; hand.armed = -1;
+    hand.sel = []; hand.assign = []; hand.confirmed = false; hand.armed = -1; hand.usedStash = false;
     afterPlace();
   }
   function undoHand() {
     var hand = G.hand;
     if (!hand.sel.length || G.busy > 0) return;
-    if (hand.confirmed) G.steps = Math.max(0, G.steps - 1);
-    hand.sel.forEach(function (st, i) { unassign(i); st.state = 'page'; TZ.S.stats.returns++; st.cr = (st.cr || 0) + 1; });
-    hand.sel = []; hand.assign = []; hand.confirmed = false; hand.armed = -1;
-    TZ.persist(); renderSource(); hud(); setHint('已撤回，步数还给你，但放回的贴纸留下了折痕。', true);
+    // 这一批里已经暂存过贴纸的，揭起的那一步不再退还
+    if (hand.confirmed && !hand.usedStash) G.steps = Math.max(0, G.steps - 1);
+    var back = hand.sel.slice();
+    hand.sel = []; hand.assign.forEach(function (t, i) { if (t) { t.pend = false; t.pendSt = null; if (t.pendEl) t.pendEl.remove(); t.pendEl = null; } });
+    hand.assign = []; hand.confirmed = false; hand.armed = -1; hand.usedStash = false;
+    var creased = false;
+    back.forEach(function (st) {
+      if (st.fromStash) { backToStash(st, null); return; }
+      st.state = 'page'; TZ.S.stats.returns++; st.cr = (st.cr || 0) + 1; creased = true;
+    });
+    TZ.persist(); renderSource(); renderStash(); hud();
+    setHint(creased ? '已撤回，放回的贴纸留下了折痕。' : '已撤回。', creased);
   }
 
   /* ================= 逐帧 ================= */

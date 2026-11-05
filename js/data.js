@@ -179,7 +179,27 @@
     { id: 25, name: '客厅与热面', works: ['cozyCorner', 'eggNoodle'], mode: 2, budget: 14, ideal: 12, reward: 360 },
     { id: 26, name: '双镊子大挑战', works: ['beefBowl', 'eelPlate'], mode: 2, budget: 14, ideal: 12, reward: 360 },
     { id: 27, name: '三道热菜', works: ['homeStir', 'tendon', 'eggNoodle'], mode: 2, budget: 20, ideal: 18, reward: 540 },
-    { id: 28, name: '把生活摆满一桌', works: ['cozyCorner', 'beefBowl', 'eelPlate'], mode: 2, budget: 20, ideal: 18, reward: 540 }
+    { id: 28, name: '把生活摆满一桌', works: ['cozyCorner', 'beefBowl', 'eelPlate'], mode: 2, budget: 20, ideal: 18, reward: 540 },
+
+    /* 叠页谜题（29–36）：左页贴纸互相叠压，只有最上面的能撕；右页下沿有 2 个暂存格（暂存多花 1 步）。
+       piles 从上到下列出一摞；key 为「作品序号.部件」。ideal 为求解脚本算出的最少步数，budget 在其上留余量。
+       双镊子关另有配对规则 pair：diffWork=同批两张须来自不同作品，bigSmall=同批两张须一大一小。 */
+    { id: 29, name: '压在底下的米饭', works: ['salmon'], mode: 1, budget: 9, ideal: 7, reward: 240, puzzle: true,
+      piles: [['0.nori', '0.rice']] },
+    { id: 30, name: '两层都压反了', works: ['eel'], mode: 1, budget: 12, ideal: 10, reward: 240, puzzle: true,
+      piles: [['0.eel', '0.lower'], ['0.nori', '0.upper']] },
+    { id: 31, name: '交错的两道菜', works: ['salmon', 'tomato'], mode: 1, budget: 18, ideal: 16, reward: 300, puzzle: true,
+      piles: [['0.nori', '0.rice', '1.plate'], ['0.salmon', '1.scallion', '1.eggs']] },
+    { id: 32, name: '不同作品才能凑一对', works: ['salmon', 'tomato'], mode: 2, budget: 11, ideal: 9, reward: 300, puzzle: true, pair: 'diffWork',
+      piles: [['1.plate', '1.eggs'], ['0.nori', '0.salmon', '1.scallion'], ['0.rice', '1.tomato']] },
+    { id: 33, name: '一大一小的默契', works: ['eel'], mode: 2, budget: 11, ideal: 9, reward: 300, puzzle: true, pair: 'bigSmall',
+      piles: [['0.nori', '0.upper'], ['0.lower', '0.eel']] },
+    { id: 34, name: '三摞贴纸的配对', works: ['eel', 'tomato'], mode: 2, budget: 12, ideal: 11, reward: 360, puzzle: true, pair: 'diffWork',
+      piles: [['0.lower', '0.eel', '0.upper'], ['0.nori', '1.scallion'], ['1.tomato', '1.plate']] },
+    { id: 35, name: '大小搭配的定食', works: ['salmonRice'], mode: 2, budget: 14, ideal: 13, reward: 360, puzzle: true, pair: 'bigSmall',
+      piles: [['0.salmon', '0.rice', '0.nori'], ['0.scallion', '0.plate']] },
+    { id: 36, name: '压叠大师的一餐', works: ['salmonRice', 'tomato'], mode: 2, budget: 16, ideal: 15, reward: 450, puzzle: true, pair: 'diffWork',
+      piles: [['1.scallion', '0.salmon'], ['0.scallion', '1.eggs', '0.nori'], ['1.tomato', '0.plate']] }
   ];
 
   // 教学奖励关：首次奖励见教学奖励配表

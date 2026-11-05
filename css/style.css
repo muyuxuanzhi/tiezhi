@@ -99,6 +99,14 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #8b5a2b url(
 .slot.armed { outline: 3px solid #6fa3a5; }
 .slot .thumb { left: 10px; top: 8px; }
 .sl-t { font-size: 12px; text-align: right; max-width: 90px; line-height: 1.2; }
+.stash { position: absolute; border: 2px dashed #b8a888; border-radius: 10px; background: rgba(255, 250, 236, .62); color: #9a8c74; font-size: 13px; display: flex; align-items: center; justify-content: center; cursor: pointer; touch-action: none; z-index: 5; transition: background .12s, border-color .12s; }
+.stash.full { border-style: solid; border-color: #c9b98f; background: rgba(250, 240, 214, .95); color: #5a4a3a; justify-content: flex-end; padding-right: 10px; }
+.stash.hot { border-color: #5f9a9c; background: rgba(214, 236, 232, .95); box-shadow: 0 0 0 3px rgba(95, 154, 156, .35); }
+.stash .thumb { left: 10px; top: 7px; }
+.cell.covered { cursor: not-allowed; }
+.cell.covered:hover > .stk { transform: none; }
+.stk.under img { filter: brightness(.84) saturate(.85); }
+.clab.up { color: #5c4f3a; font-size: 12px; text-align: left; background: rgba(255, 250, 235, .9); border-radius: 4px; padding: 0 5px; line-height: 16px; z-index: 3; }
 .work-comp { position: absolute; }
 
 .cover { position: absolute; left: 146px; top: 148px; width: 298px; height: 369px; transform: rotate(-3deg); filter: drop-shadow(0 6px 8px rgba(60, 35, 10, .3)); pointer-events: none; }

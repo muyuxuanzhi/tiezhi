@@ -49,7 +49,7 @@
       list.slice(TZ.homePage * per, TZ.homePage * per + per).forEach(function (it, i) {
         var done = isDone(it);
         var r = el('div', 'row' + (done ? ' done' : '')); pos(r, 665, 230 + i * 43, 470, 34);
-        r.innerHTML = '<span>' + (it.teach ? '教学 ' + pad(it.def.id) : (it.extra ? '扩展 ' : '') + pad(it.def.id)) + ' · ' + it.def.name + '</span><em>' + (done ? '重玩' : '开始') + '</em>';
+        r.innerHTML = '<span>' + (it.teach ? '教学 ' + pad(it.def.id) : (it.def.puzzle ? '谜题 ' : it.extra ? '扩展 ' : '') + pad(it.def.id)) + ' · ' + it.def.name + '</span><em>' + (done ? '重玩' : '开始') + '</em>';
         r.addEventListener('click', function () { TZ.audio.play('press'); TZ.go('game', { def: it.def, teach: it.teach }); });
         box.appendChild(r);
       });
