@@ -53,7 +53,13 @@
   };
   TZ.persist = function () { try { localStorage.setItem(KEY, JSON.stringify(TZ.S)); } catch (e) { } };
   TZ.addPoints = function (n) { TZ.S.points += n; TZ.S.earned += n; TZ.persist(); TZ.updateTop(); };
-  TZ.mainDoneCount = function () { var n = 0; for (var k in TZ.S.main) if (TZ.S.main[k] && TZ.S.main[k].done) n++; return n; };
+  TZ.mainDoneCount = function () { var n = 0; for (var k in TZ.S.main) if (+k <= 12 && TZ.S.main[k] && TZ.S.main[k].done) n++; return n; };
+  TZ.extraDoneCount = function () { var n = 0; for (var k in TZ.S.main) if (+k > 12 && TZ.S.main[k] && TZ.S.main[k].done) n++; return n; };
+  TZ.creaseFx = function (stkEl, n) {
+    if (!stkEl || !n) return;
+    stkEl.classList.remove('cr1', 'cr2', 'cr3');
+    stkEl.classList.add('cr' + Math.min(3, n));
+  };
   TZ.achReady = function () {
     var n = 0;
     TZ.ACH.forEach(function (a, i) { if (!TZ.S.claimed[i] && a.cur(TZ.S) >= a.t) n++; });

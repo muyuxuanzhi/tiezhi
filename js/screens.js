@@ -16,6 +16,7 @@
       if (i < 6) list.push({ teach: false, def: M[i] });
     }
     for (var j = 6; j < 12; j++) list.push({ teach: false, def: M[j] });
+    TZ.EXTRA.forEach(function (d) { list.push({ teach: false, def: d, extra: true }); });
     return list;
   }
   TZ.nextLevel = function (teach, id) {
@@ -41,14 +42,14 @@
     }));
     label(sc, 'h-title r', 667, 160, 460, '今天，也贴一点小美好');
     var md = TZ.mainDoneCount(), td = Object.keys(S.teach).length;
-    label(sc, 'h-sub', 667, 205, 460, md + ' / 12 主关 · ' + td + ' / 7 教学奖励关');
+    label(sc, 'h-sub', 667, 205, 460, md + ' / 12 主关 · ' + TZ.extraDoneCount() + ' / ' + TZ.EXTRA.length + ' 扩展关 · ' + td + ' / 7 教学');
     var box = el('div', 'layer'); sc.appendChild(box);
     function draw() {
       box.innerHTML = '';
       list.slice(TZ.homePage * per, TZ.homePage * per + per).forEach(function (it, i) {
         var done = isDone(it);
         var r = el('div', 'row' + (done ? ' done' : '')); pos(r, 665, 230 + i * 43, 470, 34);
-        r.innerHTML = '<span>' + (it.teach ? '教学 ' + pad(it.def.id) : pad(it.def.id)) + ' · ' + it.def.name + '</span><em>' + (done ? '重玩' : '开始') + '</em>';
+        r.innerHTML = '<span>' + (it.teach ? '教学 ' + pad(it.def.id) : (it.extra ? '扩展 ' : '') + pad(it.def.id)) + ' · ' + it.def.name + '</span><em>' + (done ? '重玩' : '开始') + '</em>';
         r.addEventListener('click', function () { TZ.audio.play('press'); TZ.go('game', { def: it.def, teach: it.teach }); });
         box.appendChild(r);
       });
@@ -92,7 +93,7 @@
       var im = new Image(); im.src = 'assets/img/' + t.img + '.png'; im.className = 'shop-tw'; pos(im, 150, y + 5, t.id === 3 ? 28 : 22, t.id === 3 ? 56 : 58);
       im.style.transform = 'rotate(18deg)'; im.draggable = false; sc.appendChild(im);
       label(sc, 'shop-name', 196, y + 10, 200, t.name);
-      label(sc, 'h-sub', 196, y + 38, 200, '滑动 ' + t.peel + ' · 吸附 ' + t.snap);
+      label(sc, 'h-sub', 196, y + 38, 200, '撕速 ×' + t.speed.toFixed(2).replace(/0$/, '') + ' · 吸附 ' + t.snap);
       sc.appendChild(act('t', t, 404, y + 15, 151, 36));
     });
     TZ.PAPERS.forEach(function (p, i) {
@@ -112,16 +113,18 @@
     var cnt = 0, best = 0;
     for (var k in S.coll) { cnt++; best = Math.max(best, S.coll[k].q); }
     label(sc, 'h-title', 141, 154, 420, '把喜欢的，都收在这里');
-    label(sc, 'h-sub', 141, 205, 420, cnt + ' / 30 件作品 · 最佳品质 ' + (cnt ? best : '—'));
+    var ALL = TZ.ALL_THEMES, CP = Math.ceil(ALL.length / 3);
+    label(sc, 'h-sub', 141, 205, 420, cnt + ' / ' + ALL.length * 5 + ' 件作品 · 最佳品质 ' + (cnt ? best : '—'));
     var box = el('div', 'layer'); sc.appendChild(box);
-    var prev = btn('上一页', 'green', 107, 617, 170, 42, function () { TZ.collPage = 0; draw(); });
+    var prev = btn('上一页', 'green', 107, 617, 170, 42, function () { TZ.collPage--; draw(); });
     var lab = el('div', 'bar-text center'); pos(lab, 330, 628, 140);
-    var nxt = btn('下一页', 'green', 546, 617, 172, 42, function () { TZ.collPage = 1; draw(); });
+    var nxt = btn('下一页', 'green', 546, 617, 172, 42, function () { TZ.collPage++; draw(); });
     sc.appendChild(prev); sc.appendChild(lab); sc.appendChild(nxt); backBtn(sc);
     function draw() {
       box.innerHTML = '';
       for (var r = 0; r < 3; r++) {
-        var theme = TZ.THEMES[TZ.collPage * 3 + r], wid = theme;
+        var theme = ALL[TZ.collPage * 3 + r], wid = theme;
+        if (!theme) break;
         for (var c = 0; c < 5; c++) {
           var key = theme + ':' + c, got = S.coll[key], x = 180 + c * 186, y = 245 + r * 91;
           var card = el('div', 'card' + (got ? ' got' : '')); pos(card, x, y, 176, 82); box.appendChild(card);
@@ -133,7 +136,7 @@
           label(box, 'card-s', x + 86, y + 52, 88, got ? '最佳品质 ' + got.q : '等你来贴');
         }
       }
-      prev.disabled = TZ.collPage === 0; nxt.disabled = TZ.collPage === 1; lab.textContent = (TZ.collPage + 1) + ' / 2';
+      prev.disabled = TZ.collPage <= 0; nxt.disabled = TZ.collPage >= CP - 1; lab.textContent = (TZ.collPage + 1) + ' / ' + CP;
     }
     draw();
   };
@@ -214,6 +217,7 @@
     sc.appendChild(pos(el('div', 'hr'), 667, y, 460));
     var stepTxt = d.budget ? '还余 ' + Math.max(0, d.budget - res.steps) + ' 步  ·  这次用了 ' + res.steps + ' 步'
       : '理想 ' + d.ideal + ' 步  ·  这次用了 ' + res.steps + ' 步';
+    if (res.cr) stepTxt += '  ·  折痕 ' + res.cr + ' 道，品质 −' + res.cr * 2;
     label(sc, 'res-step', 667, y + 10, 460, stepTxt);
     if (res.teach) label(sc, 'res-step small', 667, y + 36, 460, res.first ? '教学奖励首次领取' : '重玩教学没有积分，留给主关吧');
     else label(sc, 'res-step small', 667, y + 36, 460, Math.round(res.base) + ' × ' + res.rm + ' 评级 × ' + res.pm + ' 纸质' + (res.ticket ? ' + 100 加映' : ''));

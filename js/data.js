@@ -72,9 +72,74 @@
         { id: 'plant', kind: 'plant', x: -335, y: 62, layer: 1 },
         { id: 'cushion', kind: 'cushion', x: -118, y: -22, layer: 2 },
         { id: 'table', kind: 'coffeeTable', x: 96, y: 132, layer: 2 }]
+    },
+
+    /* ---- 扩展料理：全部由现有素材重新组合，坐标为自行设计 ---- */
+    salmonRice: {
+      name: '鲑鱼小定食', theme: 'salmonRice', pieces: [
+        { id: 'plate', kind: 'plate', x: 0, y: 0, layer: 0 },
+        { id: 'rice', kind: 'rice', x: 0, y: 52, layer: 1 },
+        { id: 'salmon', kind: 'salmon', x: 0, y: -18, layer: 2 },
+        { id: 'nori', kind: 'nori', x: 0, y: 18, layer: 3 },
+        { id: 'scallion', kind: 'scallion', x: 40, y: -34, layer: 4 }]
+    },
+    eelPlate: {
+      name: '鳗鱼饭团盘', theme: 'eelPlate', pieces: [
+        { id: 'plate', kind: 'plate', x: 0, y: 0, layer: 0 },
+        { id: 'lower', kind: 'riceLower', x: 0, y: 10, layer: 1 },
+        { id: 'eel', kind: 'eel', x: 0, y: 70, layer: 2 },
+        { id: 'upper', kind: 'riceUpper', x: 0, y: -28, layer: 3 },
+        { id: 'nori', kind: 'nori', x: 0, y: 14, layer: 4 }]
+    },
+    tendon: {
+      name: '天妇罗盖饭', theme: 'tendon', pieces: [
+        { id: 'plate', kind: 'plate', x: 0, y: 0, layer: 0 },
+        { id: 'rice', kind: 'rice', x: 0, y: 28, layer: 1 },
+        { id: 's1', kind: 'shrimp', x: -115, y: -52, layer: 2 },
+        { id: 's2', kind: 'shrimp', x: 115, y: -52, layer: 2 },
+        { id: 'batter', kind: 'batter', x: 0, y: 5, layer: 3 },
+        { id: 'mayo', kind: 'mayo', x: 0, y: 8, layer: 4 }]
+    },
+    beefBowl: {
+      name: '牛肉盖饭', theme: 'beefBowl', pieces: [
+        { id: 'plate', kind: 'plate', x: 0, y: 0, layer: 0 },
+        { id: 'rice', kind: 'rice', x: 0, y: 40, layer: 1 },
+        { id: 'b1', kind: 'beef', x: -105, y: 10, layer: 2 },
+        { id: 'b2', kind: 'beef', x: 105, y: 10, layer: 2 },
+        { id: 'greens', kind: 'greens', x: 0, y: -40, layer: 3 },
+        { id: 'scallion', kind: 'scallion', x: 0, y: 30, layer: 4 }]
+    },
+    eggNoodle: {
+      name: '番茄蛋汤面', theme: 'eggNoodle', pieces: [
+        { id: 'bowl', kind: 'soupBowl', x: 0, y: 0, layer: 0 },
+        { id: 'noodles', kind: 'noodles', x: 0, y: -112, layer: 1 },
+        { id: 'tomato', kind: 'tomato', x: -115, y: -135, layer: 2 },
+        { id: 'eggs', kind: 'eggs', x: 105, y: -128, layer: 2 },
+        { id: 'scallion', kind: 'scallion', x: 10, y: -95, layer: 3 }]
+    },
+    homeStir: {
+      name: '家常小炒', theme: 'homeStir', pieces: [
+        { id: 'plate', kind: 'plate', x: 0, y: 0, layer: 0 },
+        { id: 'tomato', kind: 'tomato', x: -125, y: -15, layer: 1 },
+        { id: 'eggs', kind: 'eggs', x: 115, y: 0, layer: 1 },
+        { id: 'beef', kind: 'beef', x: 0, y: 65, layer: 2 },
+        { id: 'greens', kind: 'greens', x: 0, y: -70, layer: 2 },
+        { id: 'scallion', kind: 'scallion', x: 10, y: 15, layer: 3 }]
+    },
+    cozyCorner: {
+      name: '小憩一角', theme: 'cozyCorner', pieces: [
+        { id: 'rug', kind: 'rug', x: 0, y: 100, layer: 0 },
+        { id: 'sofa', kind: 'sofa', x: -70, y: -5, layer: 1 },
+        { id: 'lamp', kind: 'floorLamp', x: 335, y: 50, layer: 1 },
+        { id: 'plant', kind: 'plant', x: -335, y: 62, layer: 1 },
+        { id: 'c1', kind: 'cushion', x: -170, y: -22, layer: 2 },
+        { id: 'c2', kind: 'cushion', x: -30, y: -22, layer: 2 },
+        { id: 'table', kind: 'coffeeTable', x: 96, y: 132, layer: 2 }]
     }
   };
   TZ.THEMES = ['salmon', 'eel', 'tempura', 'noodle', 'tomato', 'living'];
+  TZ.THEMES_EX = ['salmonRice', 'eelPlate', 'tendon', 'beefBowl', 'eggNoodle', 'homeStir', 'cozyCorner'];
+  TZ.ALL_THEMES = TZ.THEMES.concat(TZ.THEMES_EX);
 
   // 主关：mode 1=单镊子 2=双镊子；budget=null 为自由；reward 为原色纸理想奖励
   TZ.MAIN = [
@@ -92,10 +157,30 @@
     { id: 12, name: '把日子贴成喜欢的样子', works: ['noodle', 'tomato', 'living'], mode: 2, budget: 20, ideal: 16, reward: 450 }
   ];
 
+  // 扩展关（13–28）：复用现有素材的新料理与新组合，步数与奖励为自行设计
+  TZ.EXTRA = [
+    { id: 13, name: '鲑鱼小定食', works: ['salmonRice'], mode: 1, budget: null, ideal: 10, reward: 180 },
+    { id: 14, name: '鳗鱼饭团上桌', works: ['eelPlate'], mode: 1, budget: null, ideal: 10, reward: 180 },
+    { id: 15, name: '天妇罗盖饭', works: ['tendon'], mode: 1, budget: null, ideal: 12, reward: 180 },
+    { id: 16, name: '牛肉盖饭', works: ['beefBowl'], mode: 1, budget: null, ideal: 12, reward: 180 },
+    { id: 17, name: '番茄蛋汤面', works: ['eggNoodle'], mode: 1, budget: null, ideal: 10, reward: 180 },
+    { id: 18, name: '家常小炒', works: ['homeStir'], mode: 1, budget: null, ideal: 12, reward: 180 },
+    { id: 19, name: '小憩一角', works: ['cozyCorner'], mode: 1, budget: null, ideal: 14, reward: 180 },
+    { id: 20, name: '小干扰多的一页', works: ['tendon'], mode: 1, budget: 16, ideal: 12, reward: 240, decoys: ['lemon', 'cucumber', 'candy'] },
+    { id: 21, name: '两碗盖饭', works: ['tendon', 'beefBowl'], mode: 1, budget: 28, ideal: 24, reward: 360 },
+    { id: 22, name: '饭团与寿司', works: ['eelPlate', 'salmonRice'], mode: 1, budget: 24, ideal: 20, reward: 360 },
+    { id: 23, name: '一面一炒', works: ['eggNoodle', 'homeStir'], mode: 1, budget: 26, ideal: 22, reward: 360 },
+    { id: 24, name: '双手同拆·午餐', works: ['tendon', 'salmonRice'], mode: 2, budget: 14, ideal: 12, reward: 360 },
+    { id: 25, name: '客厅与热面', works: ['cozyCorner', 'eggNoodle'], mode: 2, budget: 14, ideal: 12, reward: 360 },
+    { id: 26, name: '双镊子大挑战', works: ['beefBowl', 'eelPlate'], mode: 2, budget: 14, ideal: 12, reward: 360 },
+    { id: 27, name: '三道热菜', works: ['homeStir', 'tendon', 'eggNoodle'], mode: 2, budget: 20, ideal: 18, reward: 540 },
+    { id: 28, name: '把生活摆满一桌', works: ['cozyCorner', 'beefBowl', 'eelPlate'], mode: 2, budget: 20, ideal: 18, reward: 540 }
+  ];
+
   // 教学奖励关：首次奖励见教学奖励配表
   TZ.TEACH = [
     { id: 0, name: '第一张贴纸', works: ['salmon'], mode: 1, budget: null, ideal: 6, reward: 100,
-      hint: '接着揭起下一张，记得先下后上。', hint0: '先按住米饭向右滑，轻轻揭起它吧。' },
+      hint: '接着揭起下一张，记得先下后上。', hint0: '先按住米饭，向右（或向左、上下）缓缓滑动，把它撕开吧。' },
     { id: 1, name: '上下叠贴', works: ['eel'], mode: 1, budget: null, ideal: 8, reward: 100,
       hint: '先贴下面的，再贴上面的：米饭下、鳗鱼、米饭上、海苔。' },
     { id: 2, name: '同层与叠贴', works: ['tempura'], mode: 1, budget: null, ideal: 12, reward: 120,
@@ -111,10 +196,11 @@
   ];
 
   TZ.TWEEZERS = [
-    { id: 0, name: '基础银镊子', peel: 74, snap: 32, cost: 0, img: 'tweezer0' },
-    { id: 1, name: '顺滑粉镊子', peel: 62, snap: 44, cost: 300, img: 'tweezer1' },
-    { id: 2, name: '匠心黄铜镊子', peel: 52, snap: 56, cost: 900, img: 'tweezer2' },
-    { id: 3, name: '星光镊子', peel: 46, snap: 64, cost: -1, img: 'tweezer3' }
+    // peel：撕开所需的滑动距离基数；speed：撕开速度倍率（自行设计，越好越快）
+    { id: 0, name: '基础银镊子', peel: 74, snap: 32, speed: 1.0, cost: 0, img: 'tweezer0' },
+    { id: 1, name: '顺滑粉镊子', peel: 62, snap: 44, speed: 1.35, cost: 300, img: 'tweezer1' },
+    { id: 2, name: '匠心黄铜镊子', peel: 52, snap: 56, speed: 1.7, cost: 900, img: 'tweezer2' },
+    { id: 3, name: '星光镊子', peel: 46, snap: 64, speed: 2.1, cost: -1, img: 'tweezer3' }
   ];
   TZ.PAPERS = [
     { id: 0, name: '原色纸', mult: 1.00, cost: 0, mat: 'Paper' },
@@ -126,8 +212,8 @@
 
   // 成就：cur(S) 返回当前进度
   function cnt(o) { var n = 0; for (var k in o) if (o[k]) n++; return n; }
-  function mainDone(S) { var n = 0; for (var k in S.main) if (S.main[k] && S.main[k].done) n++; return n; }
-  function themes(S) { var m = {}; for (var k in S.coll) m[k.split(':')[0]] = 1; return cnt(m); }
+  function mainDone(S) { var n = 0; for (var k in S.main) if (+k <= 12 && S.main[k] && S.main[k].done) n++; return n; }
+  function themes(S) { var m = {}; for (var k in S.coll) { var th = k.split(':')[0]; if (TZ.THEMES.indexOf(th) >= 0) m[th] = 1; } return cnt(m); }
   TZ.ACH = [
     { n: '第一张贴纸', d: '陪第一张贴纸走完教学00', t: 1, r: 60, cur: function (S) { return S.teach[0] ? 1 : 0; } },
     { n: '学会新花样', d: '学会3种教学小窍门', t: 3, r: 120, cur: function (S) { return cnt(S.teach); } },

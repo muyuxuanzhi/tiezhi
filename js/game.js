@@ -194,7 +194,7 @@
   }
 
   function showHelp() {
-    var tx = '<p>1. 在左页按住一张贴纸，向任意方向滑动超过 ' + G.tw.peel + ' 像素，贴纸就被揭起；短拖松手会回弹，不耗步数。</p>' +
+    var tx = '<p>1. 在左页按住一张贴纸，沿<b>左右或上下</b>慢慢滑动把它撕开（斜着撕不动）。贴纸越长撕得越慢，更好的镊子撕得更快。撕到一半松手、或把撕下的贴纸放回左页，都会留下<b>折痕</b>，每道折痕扣 2 点品质（每张最多计 3 道）。</p>' +
       '<p>2. 把贴纸拖到右页对应的轮廓上松手贴下（也可以松手后轻点想贴的位置）。拖回左页就是归还。</p>' +
       '<p>3. 层次先下后上，同层不限先后；天妇罗的每张面团要等它对应的虾仁。揭起一次算 1 步，贴放一次算 1 步。</p>' +
       (isDouble() ? '<p>4. 双镊子：先揭起 1～2 张放进 A、B 格，点「揭起」确认；再把它们分别对位，点「同时贴上」整批判定，任一张错误整批都不贴入。</p>' : '') +
@@ -260,14 +260,14 @@
       else {
         c.classList.add('live'); st.cellEl = c;
         c.addEventListener('pointerdown', function (e) { onCellDown(e, st, c); });
-        var w = st.wear; if (w) stk.querySelector('.wear').style.opacity = Math.min(0.6, 0.2 * w);
+        TZ.creaseFx(stk, st.cr);
       }
       c.appendChild(stk);
       var lab = el('div', 'clab', (multi && st.wi >= 0 ? (st.wi + 1) + '·' : '') + stickerName(st));
       pos(lab, -30, st.vh + 3, st.vw + 60); c.appendChild(lab);
       U.src.appendChild(c);
     });
-    if (G.teach && G.def.id === 0 && G.steps === 0 && !G.hand.sel.length && !G.parked) {
+    if (TZ.S.stats.peels < 8 && G.steps === 0 && !G.hand.sel.length && !G.parked) {
       var first = pg.stickers.filter(function (s) { return s.state === 'page'; })[0];
       if (first && first.cellEl) {
         var tut = el('div', 'tut'); first.cellEl.appendChild(tut);
@@ -337,7 +337,7 @@
       else if (G.teach && d.hint) text = d.hint;
       else if (isDouble()) text = '跨作品配成一对 · 同撕 1 步 + 同贴 1 步';
       else if (G.parked) text = '拖到右页的轮廓上松手，或轻点想贴的位置；拖回左页可以归还。';
-      else text = '按住贴纸滑动揭起，再拖到右页对应的位置。';
+      else text = '按住贴纸，向左右或上下缓缓滑动撕开；半途松手会留折痕。';
     }
     U.hint.textContent = text; U.hint.classList.toggle('bad', !!bad);
   }
@@ -361,9 +361,40 @@
     }
     e.preventDefault();
     var p = TZ.toStage(e);
-    G.gesture = { kind: 'peel', st: st, cell: cellEl, sx: p.x, sy: p.y, lx: p.x, ly: p.y, lt: performance.now(), id: e.pointerId, touch: e.pointerType === 'touch', ox: 0, oy: 0 };
+    G.gesture = { kind: 'peel', st: st, cell: cellEl, sx: p.x, sy: p.y, lx: p.x, ly: p.y, lt: performance.now(), id: e.pointerId, touch: e.pointerType === 'touch', ox: 0, oy: 0,
+      axis: null, sign: 1, ux: 0, uy: 0, need: 1, rate: 1, len: 1, target: 0, p: 0, warned: false, releasing: false };
     TZ.audio.rustleStart(TZ.PAPERS[G.paper].mat);
     cellEl.classList.add('grab');
+  }
+
+  /* 撕贴参数：只认左右/上下滑动；越长越慢，镊子越好越快 */
+  function lockAxis(g, dx, dy) {
+    var st = g.st, ax = Math.abs(dx), ay = Math.abs(dy);
+    g.axis = ax >= ay ? 'x' : 'y';
+    g.sign = (g.axis === 'x' ? dx : dy) >= 0 ? 1 : -1;
+    g.ux = g.axis === 'x' ? g.sign : 0; g.uy = g.axis === 'y' ? g.sign : 0;
+    var len = g.axis === 'x' ? st.vw : st.vh, big = Math.max(st.vw, st.vh);
+    g.len = len;
+    g.need = Math.max(46, G.tw.peel * 0.6 + len * 0.3);
+    var lenEff = 0.5 * len + 0.5 * big;
+    var T = (0.25 + lenEff / 100 * 0.3) / G.tw.speed;
+    g.rate = 1 / Math.max(0.35, T);
+  }
+  function peelTick(g, dt) {
+    var tgt = g.releasing ? 1 : g.target, d = tgt - g.p, step;
+    if (d > 0) step = Math.min(d, g.rate * dt / 1000); else step = Math.max(d, -g.rate * 3 * dt / 1000);
+    g.p += step;
+    var c = g.cell;
+    c.style.transition = 'none';
+    c.style.transform = 'translate(' + (g.ux * g.p * 8).toFixed(1) + 'px,' + (g.uy * g.p * 8).toFixed(1) + 'px)';
+    peelFx(g, g.ux, g.uy, g.p);
+    TZ.audio.rustleSpeed(Math.abs(step) * g.len / Math.max(1, dt) * 1.6);
+    if (g.p >= 0.999) completePeel(g);
+  }
+  function completePeel(g) {
+    var rel = g.releasing, pt = { x: g.lx, y: g.ly };
+    doPeel(g, pt);
+    if (rel) { TZ.audio.rustleStop(); G.gesture = null; dropHeld(g.held, true); }
   }
 
   function gestureMove(e) {
@@ -372,17 +403,21 @@
     var p = TZ.toStage(e), now = performance.now();
     var dt = Math.max(1, now - g.lt), sp = Math.hypot(p.x - g.lx, p.y - g.ly) / dt;
     g.lx = p.x; g.ly = p.y; g.lt = now;
-    TZ.audio.rustleSpeed(sp);
     if (g.kind === 'peel') {
-      var dx = p.x - g.sx, dy = p.y - g.sy, d = Math.hypot(dx, dy), R = G.tw.peel;
-      if (d <= 6) return;
-      if (d >= R) { doPeel(g, p); return; }
-      var pr = (d - 6) / (R - 6), c = g.cell;
-      var ease = pr * pr * (3 - 2 * pr);
-      c.style.transition = 'none';
-      c.style.transform = 'translate(' + dx * 0.18 * ease + 'px,' + dy * 0.18 * ease + 'px) rotate(' + (dx * 0.025 * ease) + 'deg)';
-      peelFx(g, dx / d, dy / d, ease);
+      if (g.releasing) return;
+      var dx = p.x - g.sx, dy = p.y - g.sy, d = Math.hypot(dx, dy), ax = Math.abs(dx), ay = Math.abs(dy);
+      if (!g.axis) {
+        if (d < 10) return;
+        if (Math.min(ax, ay) / Math.max(ax, ay) > 0.62) {
+          if (d > 36 && !g.warned) { g.warned = true; setHint('斜着撕不开：请沿左右或上下方向慢慢滑动。', true); }
+          return;
+        }
+        lockAxis(g, dx, dy); setHint();
+      }
+      var proj = (g.axis === 'x' ? dx : dy) * g.sign;
+      g.target = clamp(proj / g.need, 0, 1);
     } else if (g.kind === 'drag') {
+      TZ.audio.rustleSpeed(sp);
       var h = g.held;
       h.px = p.x; h.py = p.y; h.vx = sp;
       updateHot(h);
@@ -435,11 +470,15 @@
     g.fx = null;
   }
 
-  function springBack(g) {
+  function springBack(g, crease) {
     var c = g.cell; if (!c) return;
-    var f = g.fx, t0 = performance.now(), D = 170, p0 = f ? f.p : 0;
+    var f = g.fx, t0 = performance.now(), D = 220, p0 = f ? f.p : 0;
     c.style.transition = 'transform ' + D + 'ms cubic-bezier(.3,1.4,.5,1)'; c.style.transform = '';
-    var done = function () { c.classList.remove('grab'); clearFx(g); };
+    var done = function () {
+      c.classList.remove('grab');
+      if (crease && g.fx) TZ.creaseFx(g.fx.orig, g.st.cr);
+      clearFx(g);
+    };
     if (!f) { done(); return; }
     (function step(now) {
       var k = Math.min(1, (now - t0) / D), e = 1 - Math.pow(1 - k, 3);
@@ -449,11 +488,24 @@
     })(t0);
   }
 
+  function addCrease(st, why) {
+    st.cr = (st.cr || 0) + 1;
+    TZ.S.stats.creases = (TZ.S.stats.creases || 0) + 1;
+    var msg = why + '「' + stickerName(st) + '」留下了折痕（第 ' + st.cr + ' 道），品质会扣分。';
+    setHint(msg, true); TZ.toast(msg);
+  }
+
   function gestureUp(e) {
     var g = G && G.gesture;
     if (!g || e.pointerId !== g.id) return;
+    if (g.kind === 'peel') {
+      if (g.axis && g.target >= 0.9 && !G.paused) { g.releasing = true; return; }
+      G.gesture = null; TZ.audio.rustleStop();
+      var cr = g.axis && g.p >= 0.35;
+      if (cr) addCrease(g.st, '半途松手，');
+      springBack(g, cr); return;
+    }
     G.gesture = null; TZ.audio.rustleStop();
-    if (g.kind === 'peel') { springBack(g); return; }
     if (g.kind === 'drag') {
       var p = TZ.toStage(e); var h = g.held;
       h.px = p.x; h.py = p.y;
@@ -471,10 +523,18 @@
     else { st.state = 'selected'; G.hand.sel.push(st); }
     TZ.persist();
     TZ.audio.rustleStop(); TZ.audio.play('peel');
-    var h = makeHeld(st, cx + (p.x - g.sx) * 0.18, cy + (p.y - g.sy) * 0.18);
+    if (g.fx) {
+      var gh = el('div', 'pl-ghost'); pos(gh, st.cell.x, st.cell.y, st.vw, st.vh);
+      gh.style.transform = c.style.transform;
+      gh.appendChild(g.fx.base.cloneNode(true)); gh.appendChild(g.fx.o.cloneNode(true));
+      G.ui.fl.appendChild(gh);
+      gh.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, easing: 'ease-out' }).onfinish = function () { gh.remove(); };
+      g.fx = null;
+    }
+    var h = makeHeld(st, cx + g.ux * 8, cy + g.uy * 8);
     h.ox = cx - p.x; h.oy = cy - p.y; h.px = p.x; h.py = p.y; h.touch = g.touch; h.dragging = true;
-    h.rot = (p.x - g.sx) * 0.025; h.sc = 1.01;
-    h.el.animate([{ filter: 'drop-shadow(0 2px 2px rgba(60,35,10,.25))' }, { filter: 'drop-shadow(0 12px 8px rgba(60,35,10,.3))' }], { duration: 180, easing: 'ease-out' });
+    h.sc = 1.01;
+    h.el.animate([{ opacity: 0.2, filter: 'drop-shadow(0 2px 2px rgba(60,35,10,.25))' }, { opacity: 1, filter: 'drop-shadow(0 12px 8px rgba(60,35,10,.3))' }], { duration: 200, easing: 'ease-out' });
     g.kind = 'drag'; g.held = h; G.gesture = g;
     renderSource(); hud(); setHint();
     if (!G.parked) TZ.audio.rustleStart(TZ.PAPERS[G.paper].mat);
@@ -482,7 +542,7 @@
 
   function makeHeld(st, cx, cy) {
     var e = el('div', 'held'); e.style.width = st.vw + 'px'; e.style.height = st.vh + 'px';
-    e.appendChild(TZ.makeStk(st.kind, st.s, G.paper));
+    var sk = TZ.makeStk(st.kind, st.s, G.paper); TZ.creaseFx(sk, st.cr); e.appendChild(sk);
     G.ui.fl.appendChild(e);
     var h = { st: st, el: e, x: cx, y: cy, px: cx, py: cy, ox: 0, oy: 0, rot: 0, sc: 1, vx: 0, dragging: true, touch: false, slot: -1 };
     G.floats.push(h);
@@ -554,7 +614,7 @@
   }
   function returnSingle(h) {
     var st = h.st;
-    G.steps = Math.max(0, G.steps - 1); st.state = 'page'; TZ.S.stats.returns++; TZ.persist();
+    G.steps = Math.max(0, G.steps - 1); st.state = 'page'; TZ.S.stats.returns++; addCrease(st, '放回去也会折到纸，'); TZ.persist();
     G.parked = null; if (G.page !== st.page) { G.page = st.page; renderSource(); }
     flyTo(h, st.cell.x + st.vw / 2, st.cell.y + st.vh / 2, function () { renderSource(); hud(); setHint(); });
     if (G.page !== st.page) { /* 归还到原来的页面，当前页不变 */ }
@@ -602,7 +662,7 @@
     };
   }
   function showPlaced(t) {
-    var e = TZ.makeStk(t.kind, t.w.s, G.paper); e.classList.add('placed');
+    var e = TZ.makeStk(t.kind, t.w.s, G.paper); e.classList.add('placed'); TZ.creaseFx(e, t.by && t.by.cr);
     t.el.appendChild(e); t.placedEl = e; t.ghostEl.style.display = 'none';
     if (t.pendEl) { t.pendEl.remove(); t.pendEl = null; }
     TZ.audio.soft();
@@ -714,7 +774,7 @@
   function returnSelected(st, h) {
     var hand = G.hand, i = hand.sel.indexOf(st);
     if (i >= 0) { hand.sel.splice(i, 1); hand.assign.splice(i, 1); }
-    st.state = 'page'; TZ.S.stats.returns++; TZ.persist();
+    st.state = 'page'; TZ.S.stats.returns++; addCrease(st, '放回去也会折到纸，'); TZ.persist();
     if (G.page !== st.page) { G.page = st.page; renderSource(); }
     if (h) flyTo(h, st.cell.x + st.vw / 2, st.cell.y + st.vh / 2, function () { renderSource(); hud(); });
     else { renderSource(); hud(); }
@@ -807,9 +867,9 @@
     var hand = G.hand;
     if (!hand.sel.length || G.busy > 0) return;
     if (hand.confirmed) G.steps = Math.max(0, G.steps - 1);
-    hand.sel.forEach(function (st, i) { unassign(i); st.state = 'page'; TZ.S.stats.returns++; });
+    hand.sel.forEach(function (st, i) { unassign(i); st.state = 'page'; TZ.S.stats.returns++; st.cr = (st.cr || 0) + 1; });
     hand.sel = []; hand.assign = []; hand.confirmed = false; hand.armed = -1;
-    TZ.persist(); renderSource(); hud(); setHint('已撤回，回到揭起前的位置和步数。');
+    TZ.persist(); renderSource(); hud(); setHint('已撤回，步数还给你，但放回的贴纸留下了折痕。', true);
   }
 
   /* ================= 逐帧 ================= */
@@ -819,11 +879,13 @@
     var dt = Math.min(50, G.lt ? now - G.lt : 16.7); G.lt = now;
     var kf = dt / 16.7;
     function lp(a) { return 1 - Math.pow(1 - a, kf); }
+    var pg = G.gesture;
+    if (pg && pg.kind === 'peel' && pg.axis && !G.paused && !G.over) peelTick(pg, dt);
     G.floats.forEach(function (h) {
       if (h.dead) return;
       if (h.dragging) {
         var ty = h.touch ? -52 : 0;
-        h.ox += (0 - h.ox) * lp(0.14); h.oy += (ty - h.oy) * lp(0.14);
+        h.ox += (0 - h.ox) * lp(0.3); h.oy += (ty - h.oy) * lp(0.3);
         var dx = h.px + h.ox, dy = h.py + h.oy;
         if (G.hot) { dx += (G.hot.sx - dx) * 0.55; dy += (G.hot.sy - dy) * 0.55; }
         var px = h.x;
@@ -845,9 +907,10 @@
     var over = Math.max(0, G.steps - d.ideal);
     var qs = G.works.map(function (w) { return Math.max(40, 100 - 8 * w.errs); });
     var avg = qs.reduce(function (a, b) { return a + b; }, 0) / qs.length;
-    var Q = Math.max(30, Math.round(avg - 2 * over - 5 * G.decoyErrs));
+    var crN = 0; G.stickers.forEach(function (s) { crN += Math.min(s.cr || 0, 3); });
+    var Q = Math.max(30, Math.round(avg - 2 * over - 5 * G.decoyErrs - 2 * crN));
     var rating = (over === 0 && Q >= 90) ? 'S' : (over <= 2 && Q >= 75) ? 'A' : Q >= 55 ? 'B' : 'C';
-    var res = { def: d, teach: teach, works: G.works.map(function (w) { return w.wid; }), qs: qs, Q: Q, over: over,
+    var res = { def: d, teach: teach, cr: crN, works: G.works.map(function (w) { return w.wid; }), qs: qs, Q: Q, over: over,
       steps: G.steps, rating: rating, paper: G.paper, ticket: G.ticketOn, total: 0, base: 0, rm: 1, pm: 1, first: false };
     if (teach) {
       res.first = !S.teach[d.id];
@@ -875,6 +938,7 @@
     TZ.addPoints(res.total);
     TZ.persist();
     TZ.audio.play('result');
+    TZ.lastRes = res;
     TZ.go('result', res);
   }
 })();
