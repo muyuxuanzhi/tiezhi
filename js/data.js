@@ -6,7 +6,7 @@
 
   // 素材：[原图宽, 原图高, 可见x0, y0, x1, y1]
   TZ.BB = {
-    rice: [410, 236, 1, 18, 390, 191], salmon: [386, 190, 2, 14, 385, 176], nori: [114, 256, 20, 1, 67, 254],
+    rice: [410, 236, 1, 18, 390, 191], salmon: [386, 190, 2, 14, 385, 176], nori: [114, 256, 20, 1, 67, 254], noriWide: [108, 138, 4, 4, 104, 134],
     riceLower: [400, 290, 19, 3, 391, 286], riceUpper: [300, 220, 10, 1, 290, 207], eel: [352, 180, 1, 2, 350, 163],
     batter: [700, 196, 38, 23, 658, 185], shrimp: [184, 172, 9, 18, 182, 128], dough: [172, 150, 1, 0, 170, 148],
     mayo: [570, 96, 89, 2, 487, 77], soupBowl: [600, 430, 82, 7, 569, 423], noodles: [452, 288, 4, 10, 447, 276],
@@ -18,7 +18,7 @@
   };
 
   TZ.KIND_NAME = {
-    rice: '米饭底', salmon: '鲑鱼片', nori: '海苔饰带', riceLower: '米饭下', eel: '鳗鱼块', riceUpper: '米饭上',
+    rice: '米饭底', salmon: '鲑鱼片', nori: '海苔饰带', noriWide: '宽海苔片', riceLower: '米饭下', eel: '鳗鱼块', riceUpper: '米饭上',
     batter: '面衣酥', shrimp: '虾仁', dough: '面团', mayo: '美乃滋', soupBowl: '汤碗', noodles: '面条',
     beef: '牛肉', greens: '青菜', scallion: '葱花', plate: '餐盘', tomato: '番茄', eggs: '炒蛋',
     rug: '地毯', sofa: '沙发', floorLamp: '落地灯', plant: '绿植', cushion: '靠垫', coffeeTable: '圆木桌',
@@ -38,7 +38,7 @@
         { id: 'lower', kind: 'riceLower', x: 0, y: 80, layer: 0 },
         { id: 'eel', kind: 'eel', x: 0, y: 140, layer: 1 },
         { id: 'upper', kind: 'riceUpper', x: 0, y: 42, layer: 2 },
-        { id: 'nori', kind: 'nori', x: 0, y: 84, layer: 3 }]
+        { id: 'nori', kind: 'noriWide', x: 0, y: 84, layer: 3 }]
     },
     tempura: {
       name: '炸虾天妇罗', theme: 'tempura', pieces: [
@@ -89,7 +89,7 @@
         { id: 'lower', kind: 'riceLower', x: 0, y: 10, layer: 1 },
         { id: 'eel', kind: 'eel', x: 0, y: 70, layer: 2 },
         { id: 'upper', kind: 'riceUpper', x: 0, y: -28, layer: 3 },
-        { id: 'nori', kind: 'nori', x: 0, y: 14, layer: 4 }]
+        { id: 'nori', kind: 'noriWide', x: 0, y: 10, layer: 4 }]
     },
     tendon: {
       name: '天妇罗盖饭', theme: 'tendon', pieces: [
@@ -238,7 +238,7 @@
   ];
 
   // 食材托盘中可用的食材（手账）
-  TZ.JOURNAL_KINDS = ['rice', 'salmon', 'nori', 'riceLower', 'eel', 'riceUpper', 'batter', 'shrimp', 'dough', 'mayo',
+  TZ.JOURNAL_KINDS = ['rice', 'salmon', 'nori', 'noriWide', 'riceLower', 'eel', 'riceUpper', 'batter', 'shrimp', 'dough', 'mayo',
     'soupBowl', 'noodles', 'beef', 'greens', 'scallion', 'plate', 'tomato', 'eggs', 'rug', 'sofa', 'floorLamp', 'plant',
     'cushion', 'coffeeTable', 'lemon', 'cucumber', 'candy'];
 })();
