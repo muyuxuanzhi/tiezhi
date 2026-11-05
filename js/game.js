@@ -18,6 +18,15 @@
   function totalPieces() { var n = 0; G.works.forEach(function (w) { n += w.pieces.length; }); return n; }
   function filledCount(list) { var n = 0; list.forEach(function (w) { w.pieces.forEach(function (p) { if (p.filled) n++; }); }); return n; }
   function stickerName(st) { return TZ.KIND_NAME[st.kind]; }
+  // 指针坐标限制在舞台内：拖到窗口外时，贴纸停在边缘，不会丢到看不见的地方
+  function stagePt(e) {
+    var p = TZ.toStage(e);
+    return { x: clamp(p.x, 14, 1266), y: clamp(p.y, 14, 706) };
+  }
+  // 让后续的 move/up 即使出了窗口也能收到
+  function capture(e) {
+    try { if (e.pointerId != null && TZ.stage.setPointerCapture) TZ.stage.setPointerCapture(e.pointerId); } catch (err) { /* 忽略 */ }
+  }
   // 叠压：上面那张还在页上（或双镊子里尚未确认揭起）时，下面的撕不动
   function isCovered(st) {
     var a = st.above; if (!a) return false;
@@ -243,6 +252,11 @@
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
     window.addEventListener('pointercancel', onUp);
+    // 切走窗口/标签页时，进行中的撕贴或拖拽按“就地放下”处理，不让贴纸悬在半空
+    var onLost = function () { if (G && G.gesture && !G.over) abortGesture(); };
+    var onVis = function () { if (document.hidden) onLost(); };
+    window.addEventListener('blur', onLost);
+    document.addEventListener('visibilitychange', onVis);
     sc.addEventListener('pointerdown', onTap);
     var raf = 0, alive = true;
     function loop(now) { if (!alive) return; tick(now); raf = requestAnimationFrame(loop); }
@@ -250,7 +264,8 @@
     TZ.cleanup = function () {
       alive = false; cancelAnimationFrame(raf);
       window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp);
-      window.removeEventListener('pointercancel', onUp); sc.removeEventListener('pointerdown', onTap); TZ.pauseClick = null; TZ.audio.rustleStop(); G.over = true;
+      window.removeEventListener('pointercancel', onUp); window.removeEventListener('blur', onLost); document.removeEventListener('visibilitychange', onVis);
+      sc.removeEventListener('pointerdown', onTap); TZ.pauseClick = null; TZ.audio.rustleStop(); G.over = true;
     };
     TZ.G = G;
     checkFail(true);
@@ -459,7 +474,7 @@
     }
     if (isCovered(st)) { setHint('先把压在上面的「' + stickerName(st.above) + '」撕走。', true); return; }
     if (G.def.pair && isDouble() && G.hand.sel.length === 1 && !pairOk(G.hand.sel[0], st)) { setHint(pairMsg(), true); TZ.audio.play('error', 0.5); return; }
-    e.preventDefault();
+    e.preventDefault(); capture(e);
     var p = TZ.toStage(e);
     G.gesture = { kind: 'peel', st: st, cell: cellEl, sx: p.x, sy: p.y, lx: p.x, ly: p.y, lt: performance.now(), id: e.pointerId, touch: e.pointerType === 'touch', ox: 0, oy: 0,
       axis: null, sign: 1, ux: 0, uy: 0, need: 1, rate: 1, len: 1, target: 0, p: 0, warned: false, releasing: false };
@@ -500,7 +515,7 @@
   function gestureMove(e) {
     var g = G && G.gesture;
     if (!g || e.pointerId !== g.id || G.paused) return;
-    var p = TZ.toStage(e), now = performance.now();
+    var p = stagePt(e), now = performance.now();
     var dt = Math.max(1, now - g.lt), sp = Math.hypot(p.x - g.lx, p.y - g.ly) / dt;
     g.lx = p.x; g.ly = p.y; g.lt = now;
     if (g.kind === 'peel') {
@@ -608,7 +623,8 @@
     }
     G.gesture = null; TZ.audio.rustleStop();
     if (g.kind === 'drag') {
-      var p = TZ.toStage(e); var h = g.held;
+      // 取消/丢失指针时没有可靠坐标，按最后一次已知位置松手
+      var p = e.type === 'pointercancel' ? { x: g.lx, y: g.ly } : stagePt(e), h = g.held;
       h.px = p.x; h.py = p.y;
       dropHeld(h, false);
     }
@@ -712,7 +728,7 @@
   }
   /* 暂存：从页上撕下的贴纸放进暂存格多花 1 步；从暂存格取出的再放回不收费 */
   function parkAt(h, x, y, msg) {
-    h.dragging = true; h.ox = 0; h.oy = 0; h.px = x; h.py = y; G.busy++;
+    h.dragging = true; h.touch = false; h.ox = 0; h.oy = 0; h.px = x; h.py = y; G.busy++;
     setTimeout(function () {
       G.busy--; if (h.dead || G.over) return;
       h.dragging = false; parkHeld(h); if (msg) setHint(msg, true);
@@ -731,6 +747,11 @@
   }
   function stashCenter(i) { var r = STASH[i]; return { x: r.x + r.w / 2, y: r.y + r.h / 2 }; }
   function parkHeld(h) {
+    // 停放位置必须整张落在舞台里，否则拖到窗口外松手，贴纸就找不回来了
+    var mx = Math.min(h.st.vw / 2 + 8, 600), my = Math.min(h.st.vh / 2 + 8, 340);
+    var tx = clamp(h.x, mx, 1280 - mx), ty = clamp(h.y, my, 720 - my);
+    if (!h.settling && Math.hypot(tx - h.x, ty - h.y) > 24) { h.settling = true; parkAt(h, tx, ty); return; }
+    h.settling = false; h.x = tx; h.y = ty;
     G.parked = h; h.parked = true; h.el.classList.add('parked');
     h.px = h.x - h.ox; h.py = h.y - h.oy;
     setHint();
@@ -882,7 +903,7 @@
   /* 取回已停放的贴纸继续拖 */
   function onHeldDown(e, h) {
     if (G.paused || G.over || G.gesture || h.dead || isDouble()) return;
-    TZ.audio.init(); e.preventDefault(); e.stopPropagation();
+    TZ.audio.init(); e.preventDefault(); e.stopPropagation(); capture(e);
     var p = TZ.toStage(e);
     h.parked = false; h.el.classList.remove('parked'); G.parked = null;
     h.ox = h.x - p.x; h.oy = h.y - p.y; h.px = p.x; h.py = p.y; h.dragging = true; h.touch = e.pointerType === 'touch';
@@ -894,7 +915,7 @@
   function onStashDown(e, i) {
     if (e.button > 0) return;
     if (G.paused || G.over || G.gesture || G.busy > 0) return;
-    TZ.audio.init(); e.preventDefault(); e.stopPropagation();
+    TZ.audio.init(); e.preventDefault(); e.stopPropagation(); capture(e);
     var st = G.stash[i], p = TZ.toStage(e);
     if (!st) {
       if (!isDouble() && G.parked) stashSingle(G.parked, i);
@@ -990,11 +1011,11 @@
     TZ.audio.init();
     var hand = G.hand, st = hand.sel[i];
     if (!st) return;
-    e.preventDefault();
+    e.preventDefault(); capture(e);
     var p0 = TZ.toStage(e), moved = false, id = e.pointerId;
     function mv(ev) {
       if (ev.pointerId !== id) return;
-      var p = TZ.toStage(ev);
+      var p = stagePt(ev);
       if (!moved && Math.hypot(p.x - p0.x, p.y - p0.y) > 8 && (hand.confirmed ? !hand.assign[i] : true)) {
         moved = true;
         var h = makeHeld(st, p.x, p.y); h.px = p.x; h.py = p.y; h.touch = ev.pointerType === 'touch'; h.dragging = true;

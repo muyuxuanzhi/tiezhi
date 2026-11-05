@@ -156,6 +156,7 @@
 
     function itemDown(e, it, wrap) {
       e.preventDefault(); e.stopPropagation(); TZ.audio.init();
+      try { TZ.stage.setPointerCapture(e.pointerId); } catch (err) { /* 忽略 */ }
       var wasSel = sel === it.id, p0 = TZ.toStage(e), moved = false, id = e.pointerId, ox = it.x, oy = it.y, snapped = false;
       if (!wasSel) { sel = it.id; inner.querySelectorAll('.jitem.sel').forEach(function (x) { x.classList.remove('sel'); }); wrap.classList.add('sel'); syncBtns(); }
       function mv(ev) {
